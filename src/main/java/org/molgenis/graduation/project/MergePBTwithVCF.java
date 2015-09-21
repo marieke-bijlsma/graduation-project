@@ -55,6 +55,11 @@ public class MergePBTwithVCF
 				for (int i = 0; i < counts.get(chr + "_" + pos); i++)
 				{
 					pw.println(VcfUtils.convertToVCF(record));
+					
+					//TODO
+					//adjust function convertToVCF
+					//record, boolean (printSamples (default=T))
+					//print real merged file
 
 				}
 				pw.flush();
