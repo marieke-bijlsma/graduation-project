@@ -1,4 +1,4 @@
-package org.molgenis.graduation.project;
+package org.molgenis.data.annotation.graduation.project;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;

@@ -1,4 +1,4 @@
-package org.molgenis.graduation.project;
+package org.molgenis.data.annotation.graduation.project;
 
 import java.io.File;
 import java.io.FileNotFoundException;

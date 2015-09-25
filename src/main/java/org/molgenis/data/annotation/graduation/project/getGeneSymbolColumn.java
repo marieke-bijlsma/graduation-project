@@ -1,4 +1,4 @@
-package org.molgenis.graduation.project;
+package org.molgenis.data.annotation.graduation.project;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -13,14 +13,34 @@ public class getGeneSymbolColumn
 	{
 		readFile();
 	}
+	
+	// gene symbol = 3
+	// impact = 1
+	public static String getColFromInfoField(String annField, int col)
+	{		
+		StringBuffer sb = new StringBuffer();
+		String[] multiAnn = annField.split(","); //for multi gene!
+		for(String oneAnn : multiAnn)
+		{
+			String[] annSplit = oneAnn.split("\\|", -1);
+			sb.append(annSplit[col] + ", ");
+		}
+		
+		sb.delete(sb.length() - 2, sb.length());
+
+		return sb.toString().trim();
+	}
 
 	private static void readFile() throws FileNotFoundException
 	{
 
 		ArrayList<String> lines = new ArrayList<String>();
 		Scanner s = new Scanner(new File(
-				"/Users/molgenis/Documents/graduation_project/mendelian_violation_adjusted_vcfrecords_noGenotypes.txt"));
-
+				"/Users/molgenis/Documents/graduation_project/output_mergePBTwithVCF/output_mergePBTwithVCF_mendViolSampleFamily_noGenotypes_copy.txt"));
+		
+		//skipping header
+		s.nextLine();
+		
 		while (s.hasNextLine())
 		{
 			String line = s.nextLine();
@@ -30,12 +50,14 @@ public class getGeneSymbolColumn
 
 		// Variant can have multiple gene symbols with different impacts
 		// Variant then contains multiple times the impact, followed by different gene symbols
-
+		
+		
 		for (String line : lines)
 		{
 			String[] split = line.split("\t");
 
 			String infoCol = split[7];
+//			System.out.println(infoCol);
 			
 			String infoFields[] = infoCol.split(";", -1);
 			String annField = null;
