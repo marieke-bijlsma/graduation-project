@@ -6,10 +6,13 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
 
+import org.elasticsearch.common.collect.Lists;
+import org.elasticsearch.common.collect.Maps;
 import org.molgenis.data.Entity;
 import org.molgenis.data.annotation.RepositoryAnnotator;
 import org.molgenis.data.annotation.cmd.CommandLineAnnotatorConfig;
@@ -218,7 +221,7 @@ public class ClinicalFilters
 				String ExAC_AF = exac_af_split[i] == null ? "0" : exac_af_split[i];
 				int ExAC_AC_HOM = exac_ac_hom_split[i] == null ? 0 : Integer.parseInt(exac_ac_hom_split[i]);
 				int ExAC_AC_HET = exac_ac_het_split[i] == null ? 0 : Integer.parseInt(exac_ac_het_split[i]);
-
+				
 				// if not actually seen in patients, skip it...
 				if (patient_GTC[1] == 0 && patient_GTC[2] == 0)
 				{
@@ -240,7 +243,7 @@ public class ClinicalFilters
 						+ patient_GTC[2] + "], controls [homrefs=" + patient_GTC[3] + ", hets=" + patient_GTC[4]
 						+ ", homalts=" + patient_GTC[5] + "], details: [" + this.gtcMessage + "]";
 
-				System.out.println(candidateGeneGroup + " candidate: " + variantInfo);
+//				System.out.println(candidateGeneGroup + " candidate: " + variantInfo);
 
 			}
 
