@@ -73,25 +73,17 @@ public class MergePBTwithVCF
 
 		@SuppressWarnings("resource")
 		Iterator<Entity> vcf = new VcfRepository(vcfFile, "vcf").iterator();
-		
-		
 
 		ApplicationContext applicationContext = ApplicationContextProvider.getApplicationContext();
 		Map<String, RepositoryAnnotator> annotators = applicationContext.getBeansOfType(RepositoryAnnotator.class);
 		RepositoryAnnotator exacAnnotator = annotators.get("exac");
 		exacAnnotator.getCmdLineAnnotatorSettingsConfigurer().addSettings(exacFile.getAbsolutePath());
 		Iterator<Entity> vcfWithExac = exacAnnotator.annotate(vcf);
-
 		
-		
-		
-		
-		
-
 		pw.println("GENE_SYMBOL" + "\t" + "EFFECT" + "\t" + "IMPACT" + "\t" + "MOTHER_GT" + "\t" 
 		+ "FATHER_GT" + "\t" + "CHILD_GT" + "\t" + "FAMILY_ID" + "\t" + "SAMPLE_ID" + "\t" + "pred33wNotch"
-		+ "\t" + "pred38" + "\t" + "predAll82" + "\t" + "hpoGenes" + "\t" + "exac_af_STR" 
-		+ "\t" + "exac_hom_STR" + "\t" + "exac_het_STR" + "\t" + "CHROM" + "\t" + "POS" 
+		+ "\t" + "pred38" + "\t" + "predAll82" + "\t" + "hpoGenes" + "\t" + "ExAC allele frequency" 
+		+ "\t" + "homozyg in ExAC" + "\t" + "hets in ExAC" + "\t" + "\t" + "CHROM" + "\t" + "POS" 
 		+ "\t" + "ID" + "\t" + "REF" + "\t" + "ALT" + "\t" + "QUAL" + "\t" + "FILTER" + "\t"  + "INFO");
 	
 
@@ -106,7 +98,6 @@ public class MergePBTwithVCF
 		int count = 0;
 		while (vcfWithExac.hasNext())
 		{
-
 			count++;
 			if(count%1000==0)
 			{
@@ -115,15 +106,15 @@ public class MergePBTwithVCF
 			
 			/**
 			 * DEVELOPMENT MODUS!!
-			 * Stop when iterated over 10000 lines of VCF
+			 * Stop when iterated over 5000 lines of VCF
 			 */
 //			if(count == 5000)
 //			{
 //				break;
 //			}
-//			
+			
 			Entity record = vcfWithExac.next();
-
+			
 			// get chr_pos from VCF
 			String chr = record.getString("#CHROM");
 			String pos = record.getString("POS");
@@ -184,6 +175,8 @@ public class MergePBTwithVCF
 					}
 
 				}
+				
+				//CADD scores
 			}
 
 			
@@ -231,7 +224,7 @@ public class MergePBTwithVCF
 	}
 	
 	
-	//gene can be comma seperated, e.g. "MLH1, MSH2"
+	//gene can be comma separated, e.g. "MLH1, MSH2" (2 genes on different strand)
 	private String containsMultiGene(String gene, List<String> panel)
 	{
 		StringBuffer res = new StringBuffer();
@@ -253,7 +246,7 @@ public class MergePBTwithVCF
 	{
 		if (!(args.length == 4))
 		{
-			throw new Exception("Must supply 3 arguments");
+			throw new Exception("Must supply 4 arguments");
 		}
 
 		File vcfFile = new File(args[0]);
@@ -274,7 +267,7 @@ public class MergePBTwithVCF
 			throw new Exception("exac file does not exist or directory: " + exacFile.getAbsolutePath());
 		}
 
-		File output = new File(args[3]);
+		File output = new File(args[4]);
 		if (output.exists())
 		{
 			System.out.println("WARNING: output file already exists, overwriting " + output);

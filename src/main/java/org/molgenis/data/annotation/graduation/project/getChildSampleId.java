@@ -44,7 +44,8 @@ public class getChildSampleId
 			pbtFamilyId.add(lineSplit[3]);
 		}
 		s.close();
-
+		
+//		System.out.println(pbtFamilyId);
 		Scanner scan = new Scanner(pedFile);
 		String linePed = null;
 		while (scan.hasNextLine())
@@ -55,8 +56,8 @@ public class getChildSampleId
 		}
 		scan.close();
 
-		// System.out.println(pbtFamilyId.size());
-		// System.out.println(pedFamilyAndSampleId.size());
+//		 System.out.println(pbtFamilyId.size());
+//		 System.out.println(pedFamilyAndSampleId.size());
 
 		int count = 0;
 
@@ -73,12 +74,16 @@ public class getChildSampleId
 //				System.out.println(mergedChildAndFamilyId.get(count).get(id)); 
 
 			}
+//			else
+//			{
+//				System.out.println("not in keyset: " + id);
+//			}
 
 		}
-
-		// System.out.println("count: " + count);
-		// System.out.println(mergedChildAndFamilyId);
-		// System.out.println(mergedChildAndFamilyId.size());
+		
+//		 System.out.println("count: " + count);
+//		 System.out.println(mergedChildAndFamilyId);
+//		 System.out.println(mergedChildAndFamilyId.size());
 
 		// print both values separately to paste in column in pbt file
 		for (Entry<Integer, HashMap<String, String>> CountEntry : mergedChildAndFamilyId.entrySet())

@@ -140,7 +140,7 @@ public class CreateNewMendelianViolationsForX
 			String firstMotherAllele = motherAlleles[0];
 			String secondMotherAllele = motherAlleles[1];
 
-			// if male AND no PAR1 regio AND no PAR2 regio AND child is homozygous AND mother has allele
+			// if male AND no PAR1 regio AND no PAR2 regio AND child is hemizygous AND mother has allele
 			// everything has to be true, if one thing is false, don't filter
 			if (sex.equals("1") && (!((Integer.parseInt(pos) > PAR1_start) && (Integer.parseInt(pos) < PAR1_end)))
 					&& (!((Integer.parseInt(pos) > PAR2_start) && (Integer.parseInt(pos) < PAR2_end)))
@@ -152,15 +152,16 @@ public class CreateNewMendelianViolationsForX
 			else
 			{
 				count++;
-				System.out.println(Xline);
+//				System.out.println(Xline);
 				// print every line to new mendelian violations file, except sex
 				String withoutSex = Xline.replaceAll(splittedLine[17], "");
 				// remove last tab
-				pw.println(withoutSex.trim());
+				
+				pw.println(Xline);
 				pw.flush();
 			}
 		}
-		System.out.println(count);
+//		System.out.println(count);
 		pw.close();
 	}
 }
