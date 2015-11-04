@@ -86,7 +86,8 @@ public class ClinicalFilters
 				"RBL1", "MYH7", "RCC1", "DAPK3 ", "PDSS1", "SYDE1", "STON1", "BCOR", "DTNA", "HEY2", "IDUA", "HIRA",
 				"TACC3", "GLB1", "CTGF", "ARHGAP11A", "EMP1", "ACVR1", "CRYAB", "DDX58 ", "TDGF1", "RRM1", "CSTF2",
 				"ADAMTS10 ", "ANKRD1", "HCFC1", "ESCO2", "Edn1", "PDGFC", "TRAF7", "PDIA4", "ORC1", "PTRF", "GNPTG ",
-				"ACTN2", "BMP4", "ACTN4", "TAB2", "BBS2", "UNC45A", "ASXL1", "BRAF", "MYOZ2", "MYOZ1" }));
+				"ACTN2", "BMP4", "ACTN4", "TAB2", "BBS2", "UNC45A", "ASXL1", "BRAF", "MYOZ2", "MYOZ1", "TAB1",
+				"MAP3K7", "TAK1" }));
 
 		// FIXME: this is "hardcoded", could be read for a file, but for now OK, as long as it matches..
 		this.patientgroupToGenes.put("avm", avmGenes);
@@ -221,7 +222,7 @@ public class ClinicalFilters
 				String ExAC_AF = exac_af_split[i] == null ? "0" : exac_af_split[i];
 				int ExAC_AC_HOM = exac_ac_hom_split[i] == null ? 0 : Integer.parseInt(exac_ac_hom_split[i]);
 				int ExAC_AC_HET = exac_ac_het_split[i] == null ? 0 : Integer.parseInt(exac_ac_het_split[i]);
-				
+
 				// if not actually seen in patients, skip it...
 				if (patient_GTC[1] == 0 && patient_GTC[2] == 0)
 				{
@@ -243,10 +244,10 @@ public class ClinicalFilters
 						+ patient_GTC[2] + "], controls [homrefs=" + patient_GTC[3] + ", hets=" + patient_GTC[4]
 						+ ", homalts=" + patient_GTC[5] + "], details: [" + this.gtcMessage + "]";
 
-//				System.out.println(candidateGeneGroup + " candidate: " + variantInfo);
-
+				// System.out.println(candidateGeneGroup + " candidate: " + variantInfo);
+				System.out.println(variantInfo);
 			}
-
+			
 		}
 	}
 
