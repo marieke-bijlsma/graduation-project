@@ -1,46 +1,33 @@
 package org.molgenis.data.annotation.graduation.project;
 
 import java.io.File;
-import java.text.DecimalFormat;
-import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.ListIterator;
 import java.util.Map;
 import java.util.Scanner;
+import java.util.Set;
 
 import org.elasticsearch.common.collect.Lists;
 import org.elasticsearch.common.collect.Maps;
 import org.molgenis.data.Entity;
-import org.molgenis.data.annotation.RepositoryAnnotator;
 import org.molgenis.data.annotation.cmd.CommandLineAnnotatorConfig;
+import org.molgenis.data.annotation.entity.impl.SnpEffAnnotator.Impact;
 import org.molgenis.data.vcf.VcfRepository;
-import org.molgenis.util.ApplicationContextProvider;
-import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.stereotype.Component;
 
 @Component
 public class InheritedAnalysis
 {
-	
-	public void go(File vcfFile, File exacFile, File familyAndChildSamplesFile) throws Exception
+	public void go(File vcfFile, File familyAndChildSamplesFile) throws Exception
 	{
 		@SuppressWarnings("resource")
 		Iterator<Entity> vcf = new VcfRepository(vcfFile, "vcf").iterator();
 
-		ApplicationContext applicationContext = ApplicationContextProvider.getApplicationContext();
-		Map<String, RepositoryAnnotator> annotators = applicationContext.getBeansOfType(RepositoryAnnotator.class);
-		RepositoryAnnotator exacAnnotator = annotators.get("exac");
-		exacAnnotator.getCmdLineAnnotatorSettingsConfigurer().addSettings(exacFile.getAbsolutePath());
-		Iterator<Entity> vcfWithExac = exacAnnotator.annotate(vcf);
-
-		// decimal format for double, otherwise can't do calculations
-		DecimalFormat df = new DecimalFormat("#.##############################");
-
 		Scanner scanPed = new Scanner(familyAndChildSamplesFile);
 		String line = null;
-		List<Trio> samples = Lists.newArrayList();
+		List<Trio> trioList = Lists.newArrayList();
 
 		scanPed.nextLine(); // skip header
 		while (scanPed.hasNextLine())
@@ -53,8 +40,7 @@ public class InheritedAnalysis
 			String mother = lineSplit[3];
 
 			// if one of the trio got no info, skip
-			// child id 44498.Broad_reads not seen in VCF (weird id)
-			if (child.equals("0") || child.equals("44498.Broad_reads") || father.equals("0") || mother.equals("0"))
+			if (child.equals("0") || father.equals("0") || mother.equals("0"))
 			{
 				continue;
 			}
@@ -62,204 +48,353 @@ public class InheritedAnalysis
 			else
 			{
 				// add trios to map
-				samples.add(new Trio(family, child, father, mother));
+				trioList.add(new Trio(family, child, father, mother));
 			}
 
 		}
 		scanPed.close();
 
+		Set<String> genesSeenForPreviousVariant = new HashSet<String>();
+
 		int count = 0;
-		while (vcfWithExac.hasNext())
+		while (vcf.hasNext())
 		{
 			count++;
 
-			// print number of lines scanned
-			if (count % 1000 == 0)
+			// Print status after 100 lines
+			if (count % 100 == 0)
 			{
-				System.out.println("Scanned over " + count + " lines in VCF...");
+				System.out.println("Now at line: " + count);
 			}
 
-			// Only 1000 variants
-			// if (count == 1000)
-			// {
-			// break;
-			// }
+			Entity record = vcf.next();
 
-			Entity record = vcfWithExac.next();
-
-			// get filter column
-			String filter = record.getString("FILTER");
-
-			// Convert AFs to Doubles again to measure stuff
-			// If all conditions true -> filter
-			if (!(filter.equals("PASS")))
-			{
-				continue;
-			}
-
-			// Get ANN field and split it to get impact
-			String annField = record.getString("ANN");
-			String[] splitAnnField = annField.split("\\|");
-			String impact = splitAnnField[2];
-
-			if (impact.equals("LOW"))
-			{
-				continue;
-			}
-
-			if (impact.equals("MODIFIER"))
-			{
-				continue;
-			}
-
-			// First get all "not null" ExAC AF to String
-			// Then, convert all "not null" to Doubles
-			// Decimal format (String) for calculations
-			// Also check for comma (one value contains comma (0.005493,0.013)
-
-			String exacAFStr = record.get("EXAC_AF") == null || record.get("EXAC_AF").toString().contains(",") ? null : record
-					.get("EXAC_AF").toString();
-			Double exacAF = exacAFStr != null ? Double.parseDouble(exacAFStr) : null;
-			String decimalExacAF = exacAF == null ? "" : df.format(exacAF);
-
-			if (!(decimalExacAF == "") && ((Double.parseDouble(decimalExacAF) > 0.05)))
-			{
-				continue;
-			}
+			String[] multiAnn = record.getString("ANN").split(",");
 
 			String altStr = record.getString("ALT");
-
 			String[] altsplit = altStr.split(",", -1);
 
-			for (int i = 0; i < altsplit.length; i++)
+			// get ann field (genes), in hashset to get unique ones
+			// get samples and variants for trios
+			Set<String> genesSeenForNextVariant = new HashSet<String>();
+			Set<String> uniqGenes = new HashSet<String>();
+
+			for (String annField : multiAnn)
 			{
-				// String alt = altsplit[i];
-				getInfo(record, i, samples);
-			}
-		}
-	}
-
-	public void getInfo(Entity record, int altIndex, List<Trio> samples)
-	{
-		
-		Iterable<Entity> sampleEntities = record.getEntities(VcfRepository.SAMPLES);
-
-		for (Entity sample : sampleEntities)
-		{
-			// Add sample info
-			Trio.addToTrioList(samples, sample);
-		}
-
-		for (Trio trio : samples)
-		{
-			// Add variant info
-			trio.getVariants().add(record);
-
-			genotypeComparison(altIndex, trio);
-		}
-		
-//		System.out.println(multipleGenes.size());
-
-	}
-
-	public void genotypeComparison(int altIndex, Trio trio)
-	{
-		// because alt index = 0 for the first alt, we add 1
-		altIndex = altIndex + 1;
-
-		List<Entity> variants = trio.getVariants();
-		List<Entity> childSamples = trio.getChildSamples();
-		List<Entity> fatherSamples = trio.getFatherSamples();
-		List<Entity> motherSamples = trio.getMotherSamples();
-
-		Map<String, List<Entity>> multipleGenes = Maps.newHashMap();
-
-		for (int i = 0; i < variants.size(); i++)
-		{
-			String childGenotype = childSamples.get(i).get("GT").toString();
-			String fatherGenotype = fatherSamples.get(i).get("GT").toString();
-			String motherGenotype = motherSamples.get(i).get("GT").toString();
-
-			// check for missing genotypes
-			if ((childGenotype.equals("./.")) || (motherGenotype.equals("./.")) || (fatherGenotype.equals("./.")))
-			{
-				continue;
+				String[] annSplit = annField.split("\\|", -1);
+				// String impact = annSplit[2];
+				String gene = annSplit[3];
+				uniqGenes.add(gene);
 			}
 
-			// check if equals reference
-			// if (childGenotype.equals("0/0") || childGenotype.equals("0|0"))
-			// {
-			// continue;
-			// }
-			//
-			// if (fatherGenotype.equals("0/0") || fatherGenotype.equals("0|0"))
-			// {
-			// continue;
-			// }
-			//
-			// if (motherGenotype.equals("0/0") || motherGenotype.equals("0|0"))
-			// {
-			// continue;
-			// }
-
-			// homozygous child (not reference)
-			if (childGenotype.equals("0/" + altIndex) || childGenotype.equals(altIndex + "/0"))
+			for (String uniqGene : uniqGenes)
 			{
-				if (fatherGenotype.equals(altIndex + "/" + altIndex)
-						|| fatherGenotype.equals(altIndex + "|" + altIndex))
+				genesSeenForNextVariant.add(uniqGene);
+				addSamplesToTrioForGene(record, trioList, uniqGene);
+
+			}
+
+			// find out which genes in the genesSeenForPreviousVariant list are NO LONGER present in the
+			// genesSeenForNextVariant list
+			for (String gene : genesSeenForPreviousVariant)
+			{
+				if (!genesSeenForNextVariant.contains(gene))
 				{
-					if (motherGenotype.equals(altIndex + "/" + altIndex)
-							|| motherGenotype.equals(altIndex + "|" + altIndex))
-					{
-						System.out.println("Both parents are homozygous and child is heterozygous!" + "child gt: "
-								+ childGenotype + " father gt: " + fatherGenotype + " mother gt: " + motherGenotype);
+					// analyse within trios the date for this gene
 
+					analyzeGene(trioList, gene, altsplit);
+
+					// if (gene.equals("MTOR") || gene.equals("ANGPTL7"))
+					// {
+					// System.out.println("We are done with " + gene + ", starting analyis! " +
+					// genesSeenForPreviousVariant.size());
+					// checkTrio(trioList);
+					// }
+
+					// then remove data for this gene
+					// delete from trio: samples & variants
+					for (Trio trio : trioList)
+					{
+						trio.getVariants().remove(gene);
+						trio.getSamplesChild().remove(gene);
+						trio.getSamplesFather().remove(gene);
+						trio.getSamplesMother().remove(gene);
 					}
+
+				}
+			}
+
+			// and copy genes
+			genesSeenForPreviousVariant.clear();
+			for (String gene : genesSeenForNextVariant)
+			{
+				genesSeenForPreviousVariant.add(gene);
+			}
+		}
+	}
+
+	public void checkTrio(List<Trio> trioList) throws Exception
+	{
+		for (Trio trio : trioList)
+		{
+			for (String gene : trio.getSamplesChild().keySet())
+			{
+				if (!(trio.getVariants().get(gene).size() == trio.getSamplesChild().get(gene).size()
+						&& trio.getVariants().get(gene).size() == trio.getSamplesFather().get(gene).size() && trio
+						.getVariants().get(gene).size() == trio.getSamplesMother().get(gene).size()))
+				{
+					throw new Exception("Something is going wrong here...");
 				}
 
+				// if (trio.getSamplesFather().containsKey(key) && trio.getSamplesMother().containsKey(key))
+				// {
+				// System.out.println("trio ok:" + trio.getChild_id() + ", gene: " + gene);
+				// System.out.println("Child: " + trio.getChild_id() + " gene: " + key + " sample: "
+				// + trio.getSamplesChild().get(key) + "\n" + "Father: " + trio.getFather_id() + " sample: "
+				// + trio.getSamplesFather().get(key) + "\n" + "Mother: " + trio.getMother_id() + " sample: "
+				// + trio.getSamplesMother().get(key) + "\n" + "variant: " + trio.getVariants().get(key));
+				// }
 			}
+		}
+	}
 
-//			if (childGenotype.equals("0/" + altIndex) || childGenotype.equals(altIndex + "/0"))
-//			{
-//
-//			}
+	public void addSamplesToTrioForGene(Entity record, List<Trio> trioList, String gene)
+	{
+		Iterable<Entity> sampleEntities = record.getEntities(VcfRepository.SAMPLES);
 
-			// get first gene
-			String[] annSplit = variants.get(i).getString("ANN").split("\\|", -1);
-			String gene = annSplit[3];
-
-			// if gene already in map, add another variant, else put variant in list and add it together with new
-			// key in map
-			if (multipleGenes.containsKey(gene))
-			{
-				multipleGenes.get(gene).add(variants.get(i));
-			}
-			else
-			{
-				List<Entity> entities = Lists.newArrayList();
-				entities.add(variants.get(i));
-				multipleGenes.put(gene, entities);
-			}
-
+		// For every trio, add all variants to map and use gene as key
+		for (Trio trio : trioList)
+		{
+			trio.addInfoToVariantMap(gene, record);
 		}
 
-//		// if child is heterozygous
-//		for (String key : multipleGenes.keySet())
-//		{
-//			System.out.println(key);
-//			for (Entity variant : multipleGenes.get(key))
-//			{
-//				System.out.println(variant.get("GT").toString());
-//				if (variant.get("GT").toString().equals("0/" + altIndex)
-//						|| variant.get("GT").toString().equals(altIndex + "/0"))
-//				{
-//					System.out.println(variant);
-//				}
-//			}
-//		}
+		// For every sample in VCF, add all samples to right members of trio and use gene as key
+		sampleloop: for (Entity sample : sampleEntities)
+		{
+			for (Trio trio : trioList)
+			{
+				String child = trio.getChild_id();
+				String father = trio.getFather_id();
+				String mother = trio.getMother_id();
 
-		// System.out.println(multipleGenes.size());
+				String sampleID = sample.get("ORIGINAL_NAME").toString();
 
+				if (child.equals(sampleID))
+				{
+					trio.addSampleToChildMap(gene, sample);
+					continue sampleloop;
+				}
+				else if (father.equals(sampleID))
+				{
+					trio.addSampleToFatherMap(gene, sample);
+					continue sampleloop;
+				}
+				else if (mother.equals(sampleID))
+				{
+					trio.addSampleToMotherMap(gene, sample);
+					continue sampleloop;
+				}
+				else
+				{
+					continue;
+				}
+			}
+		}
+	}
+
+	public void analyzeGene(List<Trio> trioList, String gene, String[] altsplit) throws Exception
+	{
+		// look for homozygous in child && heterozygous in parents
+
+		for (Trio trio : trioList)
+		{
+			// for every trio, set counts on null
+			int childAndFatherHet = 0;
+			int childAndMotherHet = 0;
+
+			// temporary list. If comp het, go to addCandidates function. Otherwise, empty list (next trio)
+			List<Candidate> temporaryCandidates = Lists.newArrayList();
+
+			Map<String, List<Entity>> variants = trio.getVariants();
+			Map<String, List<Entity>> childSamples = trio.getSamplesChild();
+			Map<String, List<Entity>> fatherSamples = trio.getSamplesFather();
+			Map<String, List<Entity>> motherSamples = trio.getSamplesMother();
+
+			int variantIndex = 0;
+			for (Entity variant : variants.get(gene))
+			{
+				Entity sampleChild = childSamples.get(gene).get(variantIndex);
+				Entity sampleFather = fatherSamples.get(gene).get(variantIndex);
+				Entity sampleMother = motherSamples.get(gene).get(variantIndex);
+
+				String childGenotype = sampleChild.get("GT").toString();
+				String fatherGenotype = sampleFather.get("GT").toString();
+				String motherGenotype = sampleMother.get("GT").toString();
+
+				// check for missing genotypes
+				if ((childGenotype.equals("./.")) || (fatherGenotype.equals("./.")) || (motherGenotype.equals("./.")))
+				{
+					continue;
+				}
+
+				// check if genotype equals reference
+				if (childGenotype.equals("0/0") || childGenotype.equals("0|0"))
+				{
+					continue;
+				}
+
+				// Get depth for every member of trio for the variant and filter whole trio if one member
+				// has a depth below 10
+				String childDepth = sampleChild.get("DP").toString();
+				String fatherDepth = sampleFather.get("DP").toString();
+				String motherDepth = sampleMother.get("DP").toString();
+
+				if ((Integer.parseInt(childDepth) < 10 || Integer.parseInt(fatherDepth) < 10)
+						|| Integer.parseInt(motherDepth) < 10)
+				{
+					continue;
+				}
+
+				// if(altsplit.length > 1)
+				// {
+				//
+				// String[] multiAnn = variant.getString("ANN").split(",");
+				// System.out.println("multiple alleles! " + altsplit.length + " number of genes: " + multiAnn.length);
+				// }
+
+				for (int i = 0; i < altsplit.length; i++)
+				{
+					String allele = altsplit[i];
+					String ann = variant.getString("ANN");
+					Impact impact = getImpactForGeneAlleleCombo(ann, gene, allele);
+
+					if (impact.equals(Impact.MODIFIER) || impact.equals(Impact.LOW))
+					{
+						continue;
+					}
+
+					// because alt index = 0 for the first alt add 1
+					int altIndex = i + 1;
+
+					// define all heterozygous and homozygous combinations (phased and unphased)
+					String het1 = "0/" + altIndex;
+					String het2 = altIndex + "/0";
+					String het3 = "0|" + altIndex;
+					String het4 = altIndex + "|0";
+
+					// For child in homozygous analysis
+					String hom1 = altIndex + "/" + altIndex;
+					String hom2 = altIndex + "|" + altIndex;
+
+					// For parents in compound het analysis
+					String hom3 = "0/0";
+					String hom4 = "0|0";
+
+					// homozygous child (not reference) && heterozygous parents
+
+					if (childGenotype.equals(hom1) || childGenotype.equals(hom2))
+					{
+						if ((fatherGenotype.equals(het1) || fatherGenotype.equals(het2) || fatherGenotype.equals(het3) || fatherGenotype
+								.equals(het4))
+								&& (motherGenotype.equals(het1) || motherGenotype.equals(het2)
+										|| motherGenotype.equals(het3) || motherGenotype.equals(het4)))
+						{
+							Candidate candidate = new Candidate(Candidate.InheritanceMode.HOMOZYGOUS, altsplit[i],
+									variant, sampleChild, sampleFather, sampleMother);
+							trio.addCandidate(gene, candidate);
+						}
+					}
+
+					// look for compound het
+
+					// Same gene, two or more variants
+					// They can't be all heterozygous
+					// They can't be all homozygous
+					// Child must be heterozygous
+					// One of parents must be at least one time heterozygous for variant but not for the
+					// same
+					// variant
+					// variant1: father: 0/1, mother 0/0
+					// variant2: father 0/0, mother 0/1
+
+					if ((childGenotype.equals(het1) || childGenotype.equals(het2) || childGenotype.equals(het3) || childGenotype
+							.equals(het4))
+							&& (fatherGenotype.equals(het1) || fatherGenotype.equals(het2)
+									|| fatherGenotype.equals(het3) || fatherGenotype.equals(het4))
+							&& (motherGenotype.equals(hom3) || motherGenotype.equals(hom4)))
+					{
+
+						childAndFatherHet += 1;
+						Candidate candidate = new Candidate(Candidate.InheritanceMode.COMPOUND_HET, altsplit[i],
+								variant, sampleChild, sampleFather, sampleMother);
+						temporaryCandidates.add(candidate);
+					}
+
+					if ((childGenotype.equals(het1) || childGenotype.equals(het2) || childGenotype.equals(het3) || childGenotype
+							.equals(het4))
+							&& (fatherGenotype.equals(hom3) || fatherGenotype.equals(hom4))
+							&& (motherGenotype.equals(het1) || motherGenotype.equals(het2)
+									|| motherGenotype.equals(het3) || motherGenotype.equals(het4)))
+					{
+
+						childAndMotherHet += 1;
+						Candidate candidate = new Candidate(Candidate.InheritanceMode.COMPOUND_HET, altsplit[i],
+								variant, sampleChild, sampleFather, sampleMother);
+						temporaryCandidates.add(candidate);
+					}
+
+				}
+				// next variant
+				variantIndex++;
+			}
+
+			// Only if comp het found, send temporary list to addCandidates
+			// if both parents are at least heterozygous for one variant (not the same one) and child is
+			// heterozygous for both variants on this gene
+
+			if ((childAndFatherHet >= 1) && (childAndMotherHet >= 1))
+			{
+				// TODO: Use addAll -> for every gene add all candidates at once
+				for (Candidate candidate : temporaryCandidates)
+				{
+					trio.addCandidate(gene, candidate);
+				}
+			}
+
+			if (trio.getCandidatesForChildperGene().get(gene) != null)
+			{
+
+				System.out.println("for trio " + trio.getFamily_id() + ", for gene " + gene + ", we found "
+						+ trio.getCandidatesForChildperGene().get(gene).size() + " candidates");
+
+				 printCandidates(trio.getCandidatesForChildperGene().get(gene));
+			}
+		}
+
+	}
+
+	// Get impacts for gene and allele
+	private Impact getImpactForGeneAlleleCombo(String ann, String gene, String allele)
+	{
+		String impact = null;
+
+		String[] multiAnn = ann.split(",", -1);
+
+		for (String annField : multiAnn)
+		{
+			String[] annSplit = annField.split("\\|", -1);
+			impact = annSplit[2];
+		}
+
+		return Impact.valueOf(impact);
+	}
+
+	public void printCandidates(List<Candidate> candidates)
+	{
+		for (Candidate c : candidates)
+		{
+			System.out.println(c.toString());
+		}
 	}
 
 	public static void main(String[] args) throws Exception
@@ -273,9 +408,9 @@ public class InheritedAnalysis
 
 	public void run(String[] args) throws Exception
 	{
-		if (!(args.length == 3))
+		if (!(args.length == 2))
 		{
-			throw new Exception("Must supply 3 arguments");
+			throw new Exception("Must supply 2 arguments");
 		}
 
 		File vcfFile = new File(args[0]);
@@ -284,13 +419,7 @@ public class InheritedAnalysis
 			throw new Exception("VCF file does not exist or directory: " + vcfFile.getAbsolutePath());
 		}
 
-		File exacFile = new File(args[1]);
-		if (!exacFile.isFile())
-		{
-			throw new Exception("VCF file does not exist or directory: " + exacFile.getAbsolutePath());
-		}
-
-		File familyAndChildSamplesFile = new File(args[2]);
+		File familyAndChildSamplesFile = new File(args[1]);
 		if (!familyAndChildSamplesFile.isFile())
 		{
 			throw new Exception("Family and child samples file does not exist or directory: "
@@ -298,8 +427,6 @@ public class InheritedAnalysis
 		}
 
 		InheritedAnalysis ia = new InheritedAnalysis();
-		ia.go(vcfFile, exacFile, familyAndChildSamplesFile);
-
+		ia.go(vcfFile, familyAndChildSamplesFile);
 	}
-
 }

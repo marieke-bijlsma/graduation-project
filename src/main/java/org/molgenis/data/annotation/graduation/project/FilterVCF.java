@@ -2,7 +2,6 @@ package org.molgenis.data.annotation.graduation.project;
 
 import java.io.File;
 import java.io.PrintWriter;
-import java.text.DecimalFormat;
 import java.util.Iterator;
 
 import org.molgenis.data.Entity;
@@ -14,21 +13,34 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class FilterVCF
-{	
+{
+	// First filtering of VCF file to receive a smaller VCF file which can be analyzed further
 	public void go(File vcfFile, File outputFile) throws Exception
 	{
 		@SuppressWarnings("resource")
 		PrintWriter pw = new PrintWriter(outputFile, "UTF-8");
-		
+
 		@SuppressWarnings("resource")
 		Iterator<Entity> vcf = new VcfRepository(vcfFile, "vcf").iterator();
 
-		// decimal format for double, otherwise can't do calculations
-		DecimalFormat df = new DecimalFormat("#.##############################");
+		int count = 0;
 
+		// loop through VCF
 		while (vcf.hasNext())
 		{
+			count++;
 			Entity record = vcf.next();
+
+			// if (count == 100)
+			// {
+			// break;
+			// }
+
+			// print number of lines scanned
+			if (count % 1000 == 0)
+			{
+				System.out.println("Scanned over " + count + " lines in VCF...");
+			}
 
 			// get filter column and filter all that are not PASS
 			String filter = record.getString("FILTER");
@@ -38,42 +50,94 @@ public class FilterVCF
 				continue;
 			}
 
-			// Get ANN field and split it to get impact and filter low and modifier
-			String annField = record.getString("ANN");
-			String[] splitAnnField = annField.split("\\|");
-			String impact = splitAnnField[2];
+			// get alt for iterating over alt alleles and get exac af, gonl af and 1000G af
+			String altStr = record.getString("ALT");
+			String exac_af_STR = record.get("EXAC_AF") == null ? null : record.get("EXAC_AF").toString();
+			String gonl_af_STR = record.get("GoNL_AF") == null ? null : record.get("GoNL_AF").toString();
+			String thousandG_af_STR = record.get("Thousand_Genomes_AF") == null ? null : record.get(
+					"Thousand_Genomes_AF").toString();
 
-			if (impact.equals("LOW"))
+			String[] multiAnn = record.getString("ANN").split(",");
+			String[] altsplit = altStr.split(",", -1);
+
+			// if multiple alternate alleles, multiple AFs -> split AFs and analyze all
+			// ExAC is separated with comma, GoNL with pipe and 1000G aslo with comma
+
+			// ExAC get all alternate alleles
+			String[] exac_af_split = new String[altsplit.length];
+			if (exac_af_STR != null)
 			{
-				continue;
+				exac_af_split = exac_af_STR.split(",", -1);
 			}
 
-			if (impact.equals("MODIFIER"))
+			// GoNL get all alternate alleles
+			String[] gonl_af_split = new String[altsplit.length];
+			if (gonl_af_STR != null)
 			{
-				continue;
+				gonl_af_split = gonl_af_STR.split("\\|", -1);
 			}
 
-			// First get all "not null" ExAC AF to String
-			// Then, convert all "not null" to Doubles
-			// Decimal format (String) for calculations
-			// Also check for comma (one value contains comma (0.005493,0.013)
-
-			String exacAFStr = record.get("EXAC_AF") == null || record.get("EXAC_AF").toString().contains(",") ? null : record
-					.get("EXAC_AF").toString();
-			Double exacAF = exacAFStr != null ? Double.parseDouble(exacAFStr) : null;
-			String decimalExacAF = exacAF == null ? "" : df.format(exacAF);
-
-			if (!(decimalExacAF == "") && ((Double.parseDouble(decimalExacAF) > 0.05)))
+			// 1000G get all alternate alleles
+			String[] thousandG_af_split = new String[altsplit.length];
+			if (thousandG_af_STR != null)
 			{
-				continue;
+				thousandG_af_split = thousandG_af_STR.split(",", -1);
 			}
-			
-			//Filter CADD score <10?
-			//Filter GoNL and 1000G
-			
-			//convert to VCF entry and print to new file
-			String vcfEntry = VcfUtils.convertToVCF(record, false);			
-			pw.println(vcfEntry);
+
+			// iterate over alternate alleles
+
+			for (int i = 0; i < altsplit.length; i++)
+			{
+				// ExAC (AF must be lower than 0.05)
+				if (exac_af_STR != null && !exac_af_split[i].equals("."))
+				{
+					Double exac_af = Double.parseDouble(exac_af_split[i]);
+					if (exac_af > 0.05)
+					{
+						continue;
+					}
+				}
+
+				// GoNL (AF must be lower than 0.05)
+				if (gonl_af_STR != null && !gonl_af_split[i].equals("."))
+				{
+					Double gonl_af = Double.parseDouble(gonl_af_split[i]);
+					if (gonl_af > 0.05)
+					{
+						continue;
+					}
+				}
+
+				// 1000G (AF must be lower than 0.05)
+				if (thousandG_af_STR != null && !thousandG_af_split[i].equals("."))
+				{
+					Double thousandG_af = Double.parseDouble(thousandG_af_split[i]);
+					if (thousandG_af > 0.05)
+					{
+						continue;
+					}
+				}
+
+				// Get ANN field (or multiple ANN fields) and split it to get impact and filter LOW and MODIFIER
+				// Get only 2 ANN fields (for every allele), could be more than 2 ANN fields!!!
+				String ann = multiAnn[i];
+				String[] annSplit = ann.split("\\|", -1);
+				String impact = annSplit[2];
+				if (impact.equals("MODIFIER") || impact.equals("LOW"))
+				{
+					continue;
+				}
+
+				// convert to VCF entry and print to new file (true, all genotypes must be printed too)
+				String vcfEntry = VcfUtils.convertToVCF(record, true);
+				// System.out.println(vcfEntry);
+
+				pw.println(vcfEntry);
+				pw.flush();
+
+				break;
+			}
+
 		}
 	}
 
@@ -98,7 +162,7 @@ public class FilterVCF
 		{
 			throw new Exception("VCF file does not exist or directory: " + vcfFile.getAbsolutePath());
 		}
-		
+
 		File outputFile = new File(args[1]);
 		if (!outputFile.isFile())
 		{
