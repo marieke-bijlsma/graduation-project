@@ -1,6 +1,8 @@
 package org.molgenis.data.annotation.graduation.project;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -20,10 +22,16 @@ import org.springframework.stereotype.Component;
 @Component
 public class InheritedAnalysis
 {
-	public void go(File vcfFile, File familyAndChildSamplesFile) throws Exception
+	boolean printIds = false; // used in analyzeGene
+
+	public void go(File vcfFile, File familyAndChildSamplesFile, File outputFile) throws Exception
 	{
-		@SuppressWarnings("resource")
-		Iterator<Entity> vcf = new VcfRepository(vcfFile, "vcf").iterator();
+		List<Trio> trioList = readPedFile(familyAndChildSamplesFile);
+		analyzeVariants(vcfFile, outputFile, trioList);
+	}
+
+	public List<Trio> readPedFile(File familyAndChildSamplesFile) throws IOException
+	{
 
 		Scanner scanPed = new Scanner(familyAndChildSamplesFile);
 		String line = null;
@@ -53,6 +61,15 @@ public class InheritedAnalysis
 
 		}
 		scanPed.close();
+		return trioList;
+	}
+
+	public void analyzeVariants(File vcfFile, File outputFile, List<Trio> trioList) throws Exception
+	{
+		PrintWriter pw = new PrintWriter(outputFile, "UTF-8");
+
+		@SuppressWarnings("resource")
+		Iterator<Entity> vcf = new VcfRepository(vcfFile, "vcf").iterator();
 
 		Set<String> genesSeenForPreviousVariant = new HashSet<String>();
 
@@ -62,17 +79,14 @@ public class InheritedAnalysis
 			count++;
 
 			// Print status after 100 lines
-			if (count % 100 == 0)
-			{
-				System.out.println("Now at line: " + count);
-			}
+//			if (count % 100 == 0)
+//			{
+//				System.out.println("Now at line: " + count);
+//			}
 
 			Entity record = vcf.next();
 
 			String[] multiAnn = record.getString("ANN").split(",");
-
-			String altStr = record.getString("ALT");
-			String[] altsplit = altStr.split(",", -1);
 
 			// get ann field (genes), in hashset to get unique ones
 			// get samples and variants for trios
@@ -102,7 +116,7 @@ public class InheritedAnalysis
 				{
 					// analyse within trios the date for this gene
 
-					analyzeGene(trioList, gene, altsplit);
+					analyzeGene(trioList, gene, pw);
 
 					// if (gene.equals("MTOR") || gene.equals("ANGPTL7"))
 					// {
@@ -130,11 +144,14 @@ public class InheritedAnalysis
 			{
 				genesSeenForPreviousVariant.add(gene);
 			}
+
 		}
+
 	}
 
 	public void checkTrio(List<Trio> trioList) throws Exception
 	{
+
 		for (Trio trio : trioList)
 		{
 			for (String gene : trio.getSamplesChild().keySet())
@@ -202,8 +219,10 @@ public class InheritedAnalysis
 		}
 	}
 
-	public void analyzeGene(List<Trio> trioList, String gene, String[] altsplit) throws Exception
+	public void analyzeGene(List<Trio> trioList, String gene, PrintWriter pw) throws Exception
 	{
+		Map<String, List<String>> geneFamilyCandidateCounts = Maps.newHashMap();
+
 		// look for homozygous in child && heterozygous in parents
 
 		for (Trio trio : trioList)
@@ -262,11 +281,17 @@ public class InheritedAnalysis
 				// System.out.println("multiple alleles! " + altsplit.length + " number of genes: " + multiAnn.length);
 				// }
 
+				String altAlleles = variant.getString("ALT");
+				String[] altsplit = altAlleles.split(",", -1);
+
 				for (int i = 0; i < altsplit.length; i++)
 				{
-					String allele = altsplit[i];
+					// System.out.println("alt allele: " + altsplit[i]);
+					// System.out.println(variant.getString("#CHROM") + ", " + variant.getString("POS"));
+					// System.out.println(variant.get("ANN").toString());
+
 					String ann = variant.getString("ANN");
-					Impact impact = getImpactForGeneAlleleCombo(ann, gene, allele);
+					Impact impact = getImpactForGeneAlleleCombo(ann, gene, altsplit[i]);
 
 					if (impact.equals(Impact.MODIFIER) || impact.equals(Impact.LOW))
 					{
@@ -343,6 +368,45 @@ public class InheritedAnalysis
 						temporaryCandidates.add(candidate);
 					}
 
+					// look for de novo het
+					// 1/0, 0/0, 0/0
+					if ((childGenotype.equals(het1) || childGenotype.equals(het2) || childGenotype.equals(het3) || childGenotype
+							.equals(het4))
+							&& (fatherGenotype.equals(hom3) || fatherGenotype.equals(hom4))
+							&& (motherGenotype.equals(hom3) || motherGenotype.equals(hom4)))
+					{
+						Candidate candidate = new Candidate(Candidate.InheritanceMode.DENOVO_HET, altsplit[i], variant,
+								sampleChild, sampleFather, sampleMother);
+						trio.addCandidate(gene, candidate);
+
+					}
+
+					// look for de novo hom
+					// 1/1, 0/1, 0/0
+					if (childGenotype.equals(hom1) || childGenotype.equals(hom2))
+					{
+						if ((fatherGenotype.equals(het1) || fatherGenotype.equals(het2) || fatherGenotype.equals(het3) || fatherGenotype
+								.equals(het4)) && (motherGenotype.equals(hom3) || motherGenotype.equals(hom4)))
+						{
+							Candidate candidate = new Candidate(Candidate.InheritanceMode.DENOVO_HOM, altsplit[i],
+									variant, sampleChild, sampleFather, sampleMother);
+							trio.addCandidate(gene, candidate);
+						}
+					}
+
+					// OR 1/1,0/0, 0/1
+					if (childGenotype.equals(hom1) || childGenotype.equals(hom2))
+					{
+						if ((fatherGenotype.equals(hom3) || fatherGenotype.equals(hom4))
+								&& (motherGenotype.equals(het1) || motherGenotype.equals(het2)
+										|| motherGenotype.equals(het3) || motherGenotype.equals(het4)))
+						{
+							Candidate candidate = new Candidate(Candidate.InheritanceMode.DENOVO_HOM, altsplit[i],
+									variant, sampleChild, sampleFather, sampleMother);
+							trio.addCandidate(gene, candidate);
+						}
+					}
+
 				}
 				// next variant
 				variantIndex++;
@@ -363,12 +427,78 @@ public class InheritedAnalysis
 
 			if (trio.getCandidatesForChildperGene().get(gene) != null)
 			{
+				if (!geneFamilyCandidateCounts.containsKey(gene))
+				{
+					List<String> familyList = Lists.newArrayList();
 
-				System.out.println("for trio " + trio.getFamily_id() + ", for gene " + gene + ", we found "
-						+ trio.getCandidatesForChildperGene().get(gene).size() + " candidates");
+					familyList.add(trio.getFamily_id() + "\t" + trio.getCandidatesForChildperGene().get(gene).size());
+					geneFamilyCandidateCounts.put(gene, familyList);
 
-				 printCandidates(trio.getCandidatesForChildperGene().get(gene));
+				}
+				else
+				{
+					geneFamilyCandidateCounts.get(gene).add(
+							trio.getFamily_id() + "\t" + trio.getCandidatesForChildperGene().get(gene).size());
+				}
+
+				// System.out.println("\n" + "Family id: " + trio.getFamily_id() + "\n" + "Gene: " + gene + "\n"
+				// + "Number of candidates: " + trio.getCandidatesForChildperGene().get(gene).size() + "\n");
+
+				// pw.println("Family id: " + trio.getFamily_id() + "\n" + "Gene: " + gene + "\n"
+				// + "Number of candidates: " + trio.getCandidatesForChildperGene().get(gene).size() + "\n");
+				// pw.flush();
+
+				printCandidates(trio.getCandidatesForChildperGene().get(gene), pw);
+
+				// break;
+
+				// impacts can be added to Candidate object (cDNA/ effect?)
 			}
+			else
+			{
+				if (!geneFamilyCandidateCounts.containsKey(gene))
+				{
+					List<String> familyList = Lists.newArrayList();
+					familyList.add(trio.getFamily_id() + "\t" + 0);
+					geneFamilyCandidateCounts.put(gene, familyList);
+				}
+				else
+				{
+					geneFamilyCandidateCounts.get(gene).add(trio.getFamily_id() + "\t" + 0);
+				}
+
+			}
+
+		}
+
+		for (String geneSymbol : geneFamilyCandidateCounts.keySet())
+		{
+			List<String> fam_ids = Lists.newArrayList();
+
+			List<String> counts = Lists.newArrayList();
+
+			for (String famAndCount : geneFamilyCandidateCounts.get(geneSymbol))
+			{
+				String[] split = famAndCount.split("\t");
+				String fam_id = split[0];
+				String count = split[1];
+
+				fam_ids.add(fam_id + "\t");
+				counts.add(count + "\t");
+
+			}
+
+			if (printIds == false) // print fam_ids once!
+			{
+				// remove brackets and commas
+				String familyAsString = fam_ids.toString().replaceAll("^\\[", "").replaceAll("\\]$", "")
+						.replace(",", "");
+				System.out.println("\t" + familyAsString);
+				printIds = true;
+			}
+			// remove brackets and commas
+			String countsAsString = counts.toString().replaceAll("^\\[", "").replaceAll("\\]$", "").replace(",", "");
+			System.out.println(geneSymbol + "\t" + countsAsString);
 		}
 
 	}
@@ -389,11 +519,13 @@ public class InheritedAnalysis
 		return Impact.valueOf(impact);
 	}
 
-	public void printCandidates(List<Candidate> candidates)
+	public void printCandidates(List<Candidate> candidates, PrintWriter pw)
 	{
 		for (Candidate c : candidates)
 		{
-			System.out.println(c.toString());
+			// System.out.println(c.toString());
+			// pw.println(c + "\n");
+			// pw.flush();
 		}
 	}
 
@@ -408,9 +540,9 @@ public class InheritedAnalysis
 
 	public void run(String[] args) throws Exception
 	{
-		if (!(args.length == 2))
+		if (!(args.length == 3))
 		{
-			throw new Exception("Must supply 2 arguments");
+			throw new Exception("Must supply 3 arguments");
 		}
 
 		File vcfFile = new File(args[0]);
@@ -425,8 +557,13 @@ public class InheritedAnalysis
 			throw new Exception("Family and child samples file does not exist or directory: "
 					+ familyAndChildSamplesFile.getAbsolutePath());
 		}
+		File outputFile = new File(args[2]);
+		if (!outputFile.isFile())
+		{
+			throw new Exception("output file does not exist or directory: " + outputFile.getAbsolutePath());
+		}
 
 		InheritedAnalysis ia = new InheritedAnalysis();
-		ia.go(vcfFile, familyAndChildSamplesFile);
+		ia.go(vcfFile, familyAndChildSamplesFile, outputFile);
 	}
 }

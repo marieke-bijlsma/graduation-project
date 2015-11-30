@@ -7,15 +7,29 @@ import java.util.Scanner;
 
 import org.elasticsearch.common.collect.Lists;
 
+/**
+ * This class calculates the true positive rate of all replicate trios
+ * @author molgenis
+ *
+ */
 public class calculateThreshold
 {
-
+	
+	/**
+	 * Calls method readFile()
+	 * @param args the command line arguments
+	 * @throws FileNotFoundException when file is not found
+	 */
 	public static void main(String[] args) throws FileNotFoundException
 	{
 		readFile();
 
 	}
-
+	
+	/**
+	 * Read file and calculate the TP rate
+	 * @throws FileNotFoundException when file not found
+	 */
 	private static void readFile() throws FileNotFoundException
 	{
 		ArrayList<String> transmissionProbability = Lists.newArrayList();

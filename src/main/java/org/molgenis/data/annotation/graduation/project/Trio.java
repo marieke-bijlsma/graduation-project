@@ -109,11 +109,7 @@ public class Trio
 		}
 		else
 		{
-			//if variant already exists (in case of multiple alleles)
-//			if (!(variants.get(gene).contains(variant)))
-//			{
-				variants.get(gene).add(variant);
-//			}
+			variants.get(gene).add(variant);
 		}
 
 	}

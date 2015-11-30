@@ -19,10 +19,11 @@ public class Candidate
 	@Override
 	public String toString()
 	{
-		return "Candidate [inheritanceMode=" + inheritanceMode + ", " + "affected allele: " + affectedAlelle + ", " + "childGenotype="
-				+ childGenotype.get("GT").toString() + ", fatherGenotype=" + fatherGenotype.get("GT").toString()
-				+ ", motherGenotype=" + motherGenotype.get("GT").toString() + " chrom + pos: "
-				+ variant.getString("#CHROM") + " + " + variant.getString("POS") + "]";
+		return "Inheritance mode: " + inheritanceMode + "\n" + "Affected allele: " + affectedAlelle + "\n"
+				+ "Child genotype: " + childGenotype.get("GT").toString() + "\n" + "Father genotype: "
+				+ fatherGenotype.get("GT").toString() + "\n" + "Mother genotype: " + motherGenotype.get("GT").toString()
+				+ "\n" + "Chromosome and position: " + variant.getString("#CHROM") + ", " + variant.getString("POS") + "\n" + "Alt allele(s): "
+				+ variant.getString("ALT") + "\n" + "ANN field: " + variant.getString("ANN") + "\n";
 	}
 
 	private InheritanceMode inheritanceMode;
@@ -34,12 +35,12 @@ public class Candidate
 	private Entity fatherGenotype;
 	private Entity motherGenotype;
 
-	public Candidate(InheritanceMode inheritanceMode, String affectedAllele, Entity variant, Entity childGenotype, Entity fatherGenotype,
-			Entity motherGenotype)
+	public Candidate(InheritanceMode inheritanceMode, String affectedAllele, Entity variant, Entity childGenotype,
+			Entity fatherGenotype, Entity motherGenotype)
 	{
 		super();
 		this.inheritanceMode = inheritanceMode;
-		this.affectedAlelle  = affectedAllele;
+		this.affectedAlelle = affectedAllele;
 		this.variant = variant;
 		this.childGenotype = childGenotype;
 		this.fatherGenotype = fatherGenotype;
