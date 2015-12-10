@@ -16,20 +16,10 @@ import org.molgenis.data.vcf.VcfRepository;
 public class ReadVCFlines
 {
 	/**
-	 * The main method, invokes readFile().
-	 * 
-	 * @param args
-	 * @throws IOException when input file is not correct
-	 */
-	public static void main(String[] args) throws IOException
-	{
-		readFile();
-	}
-
-	/**
 	 * Reads the given file per line and prints the requested information.
 	 * 
-	 * @throws IOException when input file is not correct
+	 * @throws IOException
+	 *             when input file is not correct
 	 */
 	private static void readFile() throws IOException
 	{
@@ -57,5 +47,17 @@ public class ReadVCFlines
 
 		}
 
+	}
+
+	/**
+	 * The main method, invokes readFile().
+	 * 
+	 * @param args
+	 * @throws IOException
+	 *             when input file is not correct
+	 */
+	public static void main(String[] args) throws IOException
+	{
+		readFile();
 	}
 }

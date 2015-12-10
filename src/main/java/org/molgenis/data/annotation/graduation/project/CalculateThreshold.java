@@ -8,48 +8,52 @@ import java.util.Scanner;
 import org.elasticsearch.common.collect.Lists;
 
 /**
- * This class calculates the true positive rate of all replicate trios
- * @author molgenis
- *
+ * This class calculates the true positive rate of all replicate trios according to the transmission probability.
+ * 
+ * @author mbijlsma
  */
 public class CalculateThreshold
 {
-	
 	/**
-	 * Calls method readFile()
-	 * @param args the command line arguments
-	 * @throws FileNotFoundException when file is not found
+	 * Read file and add lines to ArrayList.
+	 * 
+	 * @throws FileNotFoundException
+	 *             when file not found
+	 * @return record list containing all lines of file
 	 */
-	public static void main(String[] args) throws FileNotFoundException
+	private static ArrayList<String> readFile() throws FileNotFoundException
 	{
-		readFile();
-
-	}
-	
-	/**
-	 * Read file and calculate the TP rate
-	 * @throws FileNotFoundException when file not found
-	 */
-	private static void readFile() throws FileNotFoundException
-	{
-		ArrayList<String> transmissionProbability = Lists.newArrayList();
+		ArrayList<String> record = Lists.newArrayList();
 		@SuppressWarnings("resource")
-		Scanner s = new Scanner(new File("/Users/molgenis/Documents/graduation_project/mendelianViolationFiles/mendelian_violation_Xadjusted_replicates.txt"));
-		
-		s.nextLine(); //header
+		Scanner s = new Scanner(
+				new File(
+						"/Users/molgenis/Documents/graduation_project/mendelianViolationFiles/mendelian_violation_Xadjusted_replicates.txt"));
+
+		s.nextLine(); // skip header
 		while (s.hasNextLine())
 		{
 			String line = s.nextLine();
-//			System.out.println(line);
-			transmissionProbability.add(line);
+			record.add(line);
 		}
 
-		for (int tp = 0; tp < 127; tp++) //max is 126
+		return record;
+	}
+
+	/**
+	 * Calculates the true positive rate according to the transmission probability and prints the result.
+	 * 
+	 * @param record
+	 *            list containing all lines of file
+	 */
+	private static void calculateTransmissionProbability(ArrayList<String> record)
+	{
+
+		for (int tp = 0; tp < 127; tp++) // max is 126
 		{
 			int total = 0;
 			int pairs = 0;
 
-			for (String line : transmissionProbability)
+			for (String line : record)
 			{
 				String[] split = line.split("\t");
 
@@ -57,33 +61,50 @@ public class CalculateThreshold
 
 				if (variantTP < tp)
 				{
-//					System.out.println(tp + " " + variantTP);
 					continue;
 				}
-				for (String line1 : transmissionProbability)
+
+				for (String replicateLine : record) // go through lines 2 times
 				{
-					String[] split1 = line1.split("\t");
-					
-					int variantTP1 = Integer.parseInt(split1[5]);
-					
-					if (variantTP1 < tp)
+					String[] replicateSplit = replicateLine.split("\t");
+
+					int replicateVariantTP = Integer.parseInt(replicateSplit[5]);
+
+					if (replicateVariantTP < tp)
 					{
 						continue;
 					}
 
-					if (split1[3].equals(split[3]))
+					if (replicateSplit[3].equals(split[3])) // matches itself
 					{
 						continue;
 					}
-					if (split1[0].equals(split[0]) && split1[1].equals(split[1]) && split1[6].equals(split[6])
-							&& split1[10].equals(split[10]) && split1[14].equals(split[14]))
+
+					if (replicateSplit[0].equals(split[0]) && replicateSplit[1].equals(split[1])
+							&& replicateSplit[6].equals(split[6]) && replicateSplit[10].equals(split[10])
+							&& replicateSplit[14].equals(split[14])) // if pair
 					{
 						pairs++;
 					}
 				}
-
+				total++;
 			}
-			System.out.println("for tp = " + tp + " we find " + total + " of which " + pairs + " pairs (perc TP:" + ((double)pairs)/(double)total*100.0 + ")");
+
+			System.out.println("for tp = " + tp + " we find " + total + " of which " + pairs + " pairs (perc TP:"
+					+ ((double) pairs) / (double) total * 100.0 + ")");
 		}
+	}
+
+	/**
+	 * The main method, invokes readFile() and calculateTransmissionProbability().
+	 * 
+	 * @param args
+	 * @throws FileNotFoundException
+	 *             when given file is not found
+	 */
+	public static void main(String[] args) throws FileNotFoundException
+	{
+		ArrayList<String> record = readFile();
+		calculateTransmissionProbability(record);
 	}
 }
