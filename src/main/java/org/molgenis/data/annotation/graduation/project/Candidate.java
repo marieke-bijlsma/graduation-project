@@ -19,11 +19,40 @@ public class Candidate
 	@Override
 	public String toString()
 	{
-		return "Inheritance mode: " + inheritanceMode + "\n" + "Affected allele: " + affectedAlelle + "\n"
-				+ "Child genotype: " + childGenotype.get("GT").toString() + "\n" + "Father genotype: "
-				+ fatherGenotype.get("GT").toString() + "\n" + "Mother genotype: " + motherGenotype.get("GT").toString()
-				+ "\n" + "Chromosome and position: " + variant.getString("#CHROM") + ", " + variant.getString("POS") + "\n" + "Alt allele(s): "
-				+ variant.getString("ALT") + "\n" + "ANN field: " + variant.getString("ANN") + "\n";
+		String annField = variant.getString("ANN");
+		String[] annSplit = annField.split("\\|");
+
+		String effect = annSplit[1];
+		String impact = annSplit[2];
+		String cDNA = annSplit[9];
+
+		String exac_af_STR = variant.get("EXAC_AF") == null ? "-" : variant.get("EXAC_AF").toString();
+		String exac_ac_hom_STR = variant.get("EXAC_AC_HOM") == null ? "-" : variant.get("EXAC_AC_HOM").toString();
+		String exac_ac_het_STR = variant.get("EXAC_AC_HET") == null ? "-" : variant.get("EXAC_AC_HET").toString();
+
+		String gonl_af_STR = null;
+
+		if (variant.get("GoNL_AF").toString().equals(".") || variant.get("GoNL_AF").toString().equals(".|.") || variant.get("GoNL_AF") == null)
+		{
+			gonl_af_STR = "-";
+		}
+		else
+		{
+			gonl_af_STR = variant.get("GoNL_AF").toString();
+		}
+
+		String thousandG_af_STR = variant.get("Thousand_Genomes_AF") == null ? "-" : variant.get("Thousand_Genomes_AF")
+				.toString();
+		String cadd = variant.get("CADD_SCALED") == null ? "-" : variant.get("CADD_SCALED").toString();
+
+		return "Inheritance mode: " + inheritanceMode + "\n" + "Chromosome and position: "
+				+ variant.getString("#CHROM") + ":" + variant.getString("POS") + "\n" + "Alt allele(s): "
+				+ variant.getString("ALT") + "\n" + "Affected allele: " + affectedAlelle + "\n"
+				+ "Child, father, mother genotypes: " + childGenotype.get("GT").toString() + ", "
+				+ fatherGenotype.get("GT").toString() + ", " + motherGenotype.get("GT").toString() + "\n" + "Impact: "
+				+ impact + " (" + effect + ", " + cDNA + ") " + "\n" + "ExAC AF: " + exac_af_STR + ", ExAC HOM: "
+				+ exac_ac_hom_STR + ", ExAC HET: " + exac_ac_het_STR + "\n" + "GoNL: " + gonl_af_STR + "\n" + "1000G: "
+				+ thousandG_af_STR + "\n" + "CADD: " + cadd + "\n";
 	}
 
 	private InheritanceMode inheritanceMode;
@@ -63,19 +92,9 @@ public class Candidate
 		return variant;
 	}
 
-	public void setVariant(Entity variant)
-	{
-		this.variant = variant;
-	}
-
 	public Entity getFatherGenotype()
 	{
 		return fatherGenotype;
-	}
-
-	public void setFatherGenotype(Entity fatherGenotype)
-	{
-		this.fatherGenotype = fatherGenotype;
 	}
 
 	public Entity getMotherGenotype()
@@ -83,29 +102,14 @@ public class Candidate
 		return motherGenotype;
 	}
 
-	public void setMotherGenotype(Entity motherGenotype)
-	{
-		this.motherGenotype = motherGenotype;
-	}
-
 	public Entity getChildGenotype()
 	{
 		return childGenotype;
 	}
 
-	public void setChildGenotype(Entity childGenotype)
-	{
-		this.childGenotype = childGenotype;
-	}
-
 	public String getAffectedAlelle()
 	{
 		return affectedAlelle;
-	}
-
-	public void setAffectedAlelle(String affectedAlelle)
-	{
-		this.affectedAlelle = affectedAlelle;
 	}
 
 }

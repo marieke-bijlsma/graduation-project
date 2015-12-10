@@ -12,7 +12,7 @@ import org.elasticsearch.common.collect.Lists;
  * @author molgenis
  *
  */
-public class calculateThreshold
+public class CalculateThreshold
 {
 	
 	/**

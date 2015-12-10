@@ -79,10 +79,10 @@ public class InheritedAnalysis
 			count++;
 
 			// Print status after 100 lines
-//			if (count % 100 == 0)
-//			{
-//				System.out.println("Now at line: " + count);
-//			}
+			// if (count % 100 == 0)
+			// {
+			// System.out.println("Now at line: " + count);
+			// }
 
 			Entity record = vcf.next();
 
@@ -221,7 +221,8 @@ public class InheritedAnalysis
 
 	public void analyzeGene(List<Trio> trioList, String gene, PrintWriter pw) throws Exception
 	{
-		Map<String, List<String>> geneFamilyCandidateCounts = Maps.newHashMap();
+		// PRINT MATRIX
+		// Map<String, List<String>> geneFamilyCandidateCounts = Maps.newHashMap();
 
 		// look for homozygous in child && heterozygous in parents
 
@@ -427,79 +428,82 @@ public class InheritedAnalysis
 
 			if (trio.getCandidatesForChildperGene().get(gene) != null)
 			{
-				if (!geneFamilyCandidateCounts.containsKey(gene))
-				{
-					List<String> familyList = Lists.newArrayList();
-
-					familyList.add(trio.getFamily_id() + "\t" + trio.getCandidatesForChildperGene().get(gene).size());
-					geneFamilyCandidateCounts.put(gene, familyList);
-
-				}
-				else
-				{
-					geneFamilyCandidateCounts.get(gene).add(
-							trio.getFamily_id() + "\t" + trio.getCandidatesForChildperGene().get(gene).size());
-				}
+				// PRINT MATRIX
+				// if (!geneFamilyCandidateCounts.containsKey(gene))
+				// {
+				// List<String> familyList = Lists.newArrayList();
+				//
+				// familyList.add(trio.getFamily_id() + "\t" + trio.getCandidatesForChildperGene().get(gene).size());
+				// geneFamilyCandidateCounts.put(gene, familyList);
+				//
+				// }
+				// else
+				// {
+				// geneFamilyCandidateCounts.get(gene).add(
+				// trio.getFamily_id() + "\t" + trio.getCandidatesForChildperGene().get(gene).size());
+				// }
 
 				// System.out.println("\n" + "Family id: " + trio.getFamily_id() + "\n" + "Gene: " + gene + "\n"
 				// + "Number of candidates: " + trio.getCandidatesForChildperGene().get(gene).size() + "\n");
 
-				// pw.println("Family id: " + trio.getFamily_id() + "\n" + "Gene: " + gene + "\n"
-				// + "Number of candidates: " + trio.getCandidatesForChildperGene().get(gene).size() + "\n");
-				// pw.flush();
+				pw.println("Family id: " + trio.getFamily_id() + "\n" + "Gene: " + gene + "\n"
+						+ "Number of candidates: " + trio.getCandidatesForChildperGene().get(gene).size() + "\n");
+				pw.flush();
 
 				printCandidates(trio.getCandidatesForChildperGene().get(gene), pw);
 
 				// break;
 
-				// impacts can be added to Candidate object (cDNA/ effect?)
+				// impacts can be added to Candidate object (cDNA/impact/effect/CADD/ExAC/1000G/GoNL)
 			}
-			else
-			{
-				if (!geneFamilyCandidateCounts.containsKey(gene))
-				{
-					List<String> familyList = Lists.newArrayList();
-					familyList.add(trio.getFamily_id() + "\t" + 0);
-					geneFamilyCandidateCounts.put(gene, familyList);
-				}
-				else
-				{
-					geneFamilyCandidateCounts.get(gene).add(trio.getFamily_id() + "\t" + 0);
-				}
-
-			}
+			// PRINT MATRIX
+			// else
+			// {
+			// if (!geneFamilyCandidateCounts.containsKey(gene))
+			// {
+			// List<String> familyList = Lists.newArrayList();
+			// familyList.add(trio.getFamily_id() + "\t" + 0);
+			// geneFamilyCandidateCounts.put(gene, familyList);
+			// }
+			// else
+			// {
+			// geneFamilyCandidateCounts.get(gene).add(trio.getFamily_id() + "\t" + 0);
+			// }
+			//
+			// }
 
 		}
+		// PRINT MATRIX
+		// for (String geneSymbol : geneFamilyCandidateCounts.keySet())
+		// {
+		// List<String> fam_ids = Lists.newArrayList();
+		//
+		// List<String> counts = Lists.newArrayList();
+		//
+		// for (String famAndCount : geneFamilyCandidateCounts.get(geneSymbol))
+		// {
+		// String[] split = famAndCount.split("\t");
+		// String fam_id = split[0];
+		// String count = split[1];
+		//
+		// fam_ids.add(fam_id + "\t");
+		// counts.add(count + "\t");
+		//
+		// }
 
-		for (String geneSymbol : geneFamilyCandidateCounts.keySet())
-		{
-			List<String> fam_ids = Lists.newArrayList();
-
-			List<String> counts = Lists.newArrayList();
-
-			for (String famAndCount : geneFamilyCandidateCounts.get(geneSymbol))
-			{
-				String[] split = famAndCount.split("\t");
-				String fam_id = split[0];
-				String count = split[1];
-
-				fam_ids.add(fam_id + "\t");
-				counts.add(count + "\t");
-
-			}
-
-			if (printIds == false) // print fam_ids once!
-			{
-				// remove brackets and commas
-				String familyAsString = fam_ids.toString().replaceAll("^\\[", "").replaceAll("\\]$", "")
-						.replace(",", "");
-				System.out.println("\t" + familyAsString);
-				printIds = true;
-			}
-			// remove brackets and commas
-			String countsAsString = counts.toString().replaceAll("^\\[", "").replaceAll("\\]$", "").replace(",", "");
-			System.out.println(geneSymbol + "\t" + countsAsString);
-		}
+		// if (printIds == false) // print fam_ids once!
+		// {
+		// remove brackets and commas
+		// String familyAsString = fam_ids.toString().replaceAll("^\\[", "").replaceAll("\\]$", "")
+		// .replace(",", "");
+		// System.out.println("\t" + familyAsString);
+		// printIds = true;
+		// }
+		// PRINT MATRIX
+		// remove brackets and commas
+		// String countsAsString = counts.toString().replaceAll("^\\[", "").replaceAll("\\]$", "").replace(",", "");
+		// System.out.println(geneSymbol + "\t" + countsAsString);
+		// }
 
 	}
 
@@ -524,8 +528,8 @@ public class InheritedAnalysis
 		for (Candidate c : candidates)
 		{
 			// System.out.println(c.toString());
-			// pw.println(c + "\n");
-			// pw.flush();
+			pw.println(c + "\n");
+			pw.flush();
 		}
 	}
 
