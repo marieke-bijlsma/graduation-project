@@ -3,9 +3,13 @@ package org.molgenis.data.annotation.graduation.project;
 import java.util.Arrays;
 import java.util.List;
 
+/**
+ * This class contains multiple gene lists that are invoked by the MergePBTwithVCF class.
+ * 
+ * @author mbijlsma
+ */
 public class GenePanels
 {
-
 	static List<String> hpoGenes = Arrays.asList(new String[]
 	{ "ABCC9", "ACTB", "ADAMTS10", "ADAMTSL2", "ARVCF", "B3GALT6", "B3GAT3", "B4GALT7", "BBS2", "BRAF", "BRCA2",
 			"BRIP1", "CBL", "CHRNG", "COMT", "EHMT1", "ELN", "ERCC4", "FAM58A", "FANCA", "FANCB", "FANCC", "FANCD2",

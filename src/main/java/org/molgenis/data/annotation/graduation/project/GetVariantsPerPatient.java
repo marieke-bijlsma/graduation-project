@@ -146,7 +146,7 @@ public class GetVariantsPerPatient
 	{
 		if (!(args.length == 1))
 		{
-			throw new Exception("Must supply 1 arguments");
+			throw new Exception("Must supply 1 argument");
 		}
 
 		File vcfFile = new File(args[0]);

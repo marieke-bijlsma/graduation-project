@@ -100,7 +100,7 @@ public class CompareMVgenesWithGDIgenes
 	/**
 	 * The main method, invokes readMVfile(), readGDIfile() and compare().
 	 * 
-	 * @param args
+	 * @param args the command line arguments
 	 * @throws Exception
 	 *             when the length of the arguments is not 2, or if one of the 2 files does not exists.
 	 */

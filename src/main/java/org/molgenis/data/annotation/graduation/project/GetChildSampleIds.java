@@ -100,8 +100,8 @@ public class GetChildSampleIds
 	/**
 	 * The main method, invokes readPed(), readPbt(), and mergeChildAndFamilyId().
 	 * 
-	 * @param args
-	 * @throws Exception when arguments don't have the right length or when PED or PBT file does not exists.
+	 * @param args the command line arguments
+	 * @throws Exception when length of arguments is not 2 or when PED or PBT file does not exists.
 	 */
 	public static void main(String[] args) throws Exception
 	{
