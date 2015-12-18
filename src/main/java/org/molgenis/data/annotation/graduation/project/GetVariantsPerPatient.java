@@ -7,7 +7,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Scanner;
 
-import org.elasticsearch.common.collect.Lists;
 import org.elasticsearch.common.collect.Maps;
 
 public class GetVariantsPerPatient
@@ -16,7 +15,7 @@ public class GetVariantsPerPatient
 	Map<String, List<String>> impactsPerPatient = Maps.newHashMap();
 	Map<String, List<Integer>> impactCountsPerPatient = Maps.newHashMap();
 
-	public void go(File vcfFile) throws Exception
+	public void readVCF(File vcfFile) throws Exception
 	{
 		Scanner s = new Scanner(vcfFile);
 		String line = null;
@@ -118,7 +117,7 @@ public class GetVariantsPerPatient
 
 				if (variantCountsPerPatient.containsKey(patient))
 				{
-					// output with annotation
+					// output with context
 
 					// System.out.println("Patient " + patient + " has " + variantCountsPerPatient.get(patient)
 					// + " variants." + entryImpactCount.getValue().get(0) + " high impacts, "
@@ -156,7 +155,7 @@ public class GetVariantsPerPatient
 		}
 
 		GetVariantsPerPatient vpp = new GetVariantsPerPatient();
-		vpp.go(vcfFile);
+		vpp.readVCF(vcfFile);
 
 	}
 

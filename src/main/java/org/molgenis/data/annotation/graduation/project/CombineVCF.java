@@ -15,10 +15,27 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.stereotype.Component;
 
+/**
+ * This class combines a VCF file with a datatset (ExAC, GoNL, Thousand Genomes, or CADD) and writes the output to a new
+ * file.
+ * 
+ * @author mbijlsma
+ */
 @Component
 public class CombineVCF
 {
-
+	/**
+	 * Reads a VCF file and the associated data file, parses it, and writes it to a new file.
+	 * 
+	 * @param vcfFile
+	 *            the VCF file to be parsed
+	 * @param dataFile
+	 *            the data file to be parsed
+	 * @param outputFile
+	 *            the file where the output will be written to
+	 * @throws Exception
+	 *             when output file is not correct
+	 */
 	public void go(File vcfFile, File dataFile, File outputFile) throws Exception
 	{
 		@SuppressWarnings("resource")
@@ -30,17 +47,17 @@ public class CombineVCF
 		ApplicationContext applicationContext = ApplicationContextProvider.getApplicationContext();
 		Map<String, RepositoryAnnotator> annotators = applicationContext.getBeansOfType(RepositoryAnnotator.class);
 		RepositoryAnnotator exacAnnotator = annotators.get("exac");
-		//RepositoryAnnotator caddAnnotator = annotators.get("cadd");
-		//RepositoryAnnotator gonlAnnotator = annotators.get("gonl");
-		//RepositoryAnnotator thousandGenomesAnnotator = annotators.get("thousandGenomes");
+		// RepositoryAnnotator caddAnnotator = annotators.get("cadd");
+		// RepositoryAnnotator gonlAnnotator = annotators.get("gonl");
+		// RepositoryAnnotator thousandGenomesAnnotator = annotators.get("thousandGenomes");
 		exacAnnotator.getCmdLineAnnotatorSettingsConfigurer().addSettings(dataFile.getAbsolutePath());
-		//caddAnnotator.getCmdLineAnnotatorSettingsConfigurer().addSettings(dataFile.getAbsolutePath());
-		//gonlAnnotator.getCmdLineAnnotatorSettingsConfigurer().addSettings(dataFile.getAbsolutePath());
-		//thousandGenomesAnnotator.getCmdLineAnnotatorSettingsConfigurer().addSettings(dataFile.getAbsolutePath());
+		// caddAnnotator.getCmdLineAnnotatorSettingsConfigurer().addSettings(dataFile.getAbsolutePath());
+		// gonlAnnotator.getCmdLineAnnotatorSettingsConfigurer().addSettings(dataFile.getAbsolutePath());
+		// thousandGenomesAnnotator.getCmdLineAnnotatorSettingsConfigurer().addSettings(dataFile.getAbsolutePath());
 		Iterator<Entity> vcfWithExac = exacAnnotator.annotate(vcf);
-		//Iterator<Entity> vcfWithCadd = caddAnnotator.annotate(vcf);
-		//Iterator<Entity> vcfWithGonl = gonlAnnotator.annotate(vcf);
-		//Iterator<Entity> vcfWithThousandGenomes = thousandGenomesAnnotator.annotate(vcf);
+		// Iterator<Entity> vcfWithCadd = caddAnnotator.annotate(vcf);
+		// Iterator<Entity> vcfWithGonl = gonlAnnotator.annotate(vcf);
+		// Iterator<Entity> vcfWithThousandGenomes = thousandGenomesAnnotator.annotate(vcf);
 
 		while (vcfWithExac.hasNext())
 		{
@@ -49,14 +66,28 @@ public class CombineVCF
 			String exac_af_STR = record.get("EXAC_AF") == null ? null : record.get("EXAC_AF").toString();
 			String exac_ac_hom_STR = record.get("EXAC_AC_HOM") == null ? "" : record.get("EXAC_AC_HOM").toString();
 			String exac_ac_het_STR = record.get("EXAC_AC_HET") == null ? "" : record.get("EXAC_AC_HET").toString();
-			
-			String vcfEntry = VcfUtils.convertToVCF(record, false);
-			
-			pw.println(vcfEntry + "\t" + exac_af_STR + "\t" + exac_ac_hom_STR + "\t" + exac_ac_het_STR);
+			// String gonl_af_STR = record.get("GoNL_AF") == null ? null : record.get("GoNL_AF").toString();
+			// String thousandG_af_STR = record.get("Thousand_Genomes_AF") == null ? null : record.get(
+			// "Thousand_Genomes_AF").toString();
+			// String cadd_score = record.get("CADD_SCALED") == null ? null : record.get("CADD_SCALED").toString();
 
+			String vcfEntry = VcfUtils.convertToVCF(record, false);
+
+			pw.println(vcfEntry + "\t" + exac_af_STR + "\t" + exac_ac_hom_STR + "\t" + exac_ac_het_STR);
+			// pw.println(vcfEntry + "\t" + gonl_af_STR
+			// pw.println(vcfEntry + "\t" + thousandG_af_STR
+			// pw.println(vcfEntry + "\t" + cadd_score
 		}
 	}
 
+	/**
+	 * The main method, invokes run().
+	 * 
+	 * @param args
+	 *            the command line arguments
+	 * @throws Exception
+	 *             when bean can't be created
+	 */
 	public static void main(String[] args) throws Exception
 	{
 		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext("org.molgenis.data.annotation");
@@ -66,6 +97,14 @@ public class CombineVCF
 		ctx.close();
 	}
 
+	/**
+	 * Parses the command line arguments.
+	 * 
+	 * @param args
+	 *            the command line arguments
+	 * @throws Exception
+	 *             when the length of the arguments is not 3, or if the VCF or data file does not exists.
+	 */
 	public void run(String[] args) throws Exception
 	{
 		if (!(args.length == 3))
@@ -76,23 +115,22 @@ public class CombineVCF
 		File vcfFile = new File(args[0]);
 		if (!vcfFile.isFile())
 		{
-			throw new Exception("Input VCF file does not exist or directory: " + vcfFile.getAbsolutePath());
+			throw new Exception("Input VCF file does not exist or is not a directory: " + vcfFile.getAbsolutePath());
 		}
 
 		File dataFile = new File(args[1]);
 		if (!dataFile.isFile())
 		{
-			throw new Exception("Data file does not exist or directory: " + dataFile.getAbsolutePath());
+			throw new Exception("Data file does not exist or is not a directory: " + dataFile.getAbsolutePath());
 		}
-		
+
 		File outputFile = new File(args[2]);
 		if (!outputFile.isFile())
 		{
-			throw new Exception("Output file does not exist or directory: " + outputFile.getAbsolutePath());
+			throw new Exception("Output file does not exist or is not a directory: " + outputFile.getAbsolutePath());
 		}
 
 		CombineVCF cv = new CombineVCF();
 		cv.go(vcfFile, dataFile, outputFile);
-
 	}
 }

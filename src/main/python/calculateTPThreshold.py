@@ -1,50 +1,61 @@
 class Parser():
 	'''
-	Calculate how many variants will be filtered according to several TP thresholds
-	and what the best threshold would be
+	Calculate how many variants will pass and how many will be filtered according to several TP thresholds 
+	and print results.
 	'''
 	def __init__(self):
 		self.readFile()
 
+	'''
+	Read MV file and put transmission probabilities in a list.
+	'''
 	def readFile(self):
-		file = "/Users/molgenis/Documents/graduation_project/mendelian_violation_adjusted_replicates.txt"
+		file = "/Users/molgenis/Documents/graduation_project/mendelianViolationFiles/mendelian_violation_allDiploid_Xadjusted.txt"
 		
-		transmissionProbability = []
+		transmissionProbabilities = []
 
 		with open(file) as f:
 			next(f)
 			for line in f:
 				if line != "":
 					columns = line.split('\t')
-					transmissionProbability.append(columns[4])
+					transmissionProbabilities.append(columns[4])
 				else:
-					next(line)
-	
-	#for every threshold, write to file!				
-
-		countGoodTP = 0
-		countWrongTP = 0
-		
-# 		tpThreshold = list(range(2,53))
-
-		resultGood = []		
-		resultWrong = []
-		minTP = 2
-		
-		for tp in transmissionProbability:
-			if int(tp) >= minTP:
-				countGoodTP+=1	
-								
-			else:
-				countWrongTP+=1
+					next(line)	
 					
-		resultGood.append(countGoodTP)
-		resultWrong.append(countWrongTP)
-			
-				
-		print(resultGood)
-		print(resultWrong)
+		self.countVariants(transmissionProbabilities)
 
+	'''
+	Count number of variants that will be filtered and those that will pass.
+	Put variants and counts for both cases in separate dictionaries.
+	'''	
+	def countVariants(self, transmissionProbabilities):	
+		numberOfPassedVariants = {}
+		numberOfFilteredVariants = {}
+	
+		for i in range(1,128): # max TP = 127
+			countPassed = 0
+			countFiltered = 0
+			
+			for tp in transmissionProbabilities:
+				if int(tp) >= i:
+					countPassed += 1	
+					numberOfPassedVariants[i] = {i : countPassed}
+				else:
+					countFiltered += 1
+					numberOfFilteredVariants[i] = {i : countFiltered}
+					
+		self.printCounts(numberOfPassedVariants, numberOfFilteredVariants)
+
+	'''
+	Print the results.
+	'''						
+	def printCounts(self, numberOfPassedVariants, numberOfFilteredVariants): 
+		for count in numberOfPassedVariants:
+			print(numberOfPassedVariants[count])
+			
+		for count in numberOfFilteredVariants:
+			print(numberOfFilteredVariants[count])	
 
 if __name__ == "__main__":
 	p = Parser()
