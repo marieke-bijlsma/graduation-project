@@ -1,5 +1,7 @@
 package org.molgenis.data.annotation.graduation.project;
 
+import static org.elasticsearch.common.collect.Lists.newArrayList;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -11,7 +13,6 @@ import java.util.Scanner;
 import java.util.Set;
 
 import org.elasticsearch.common.collect.Lists;
-import org.elasticsearch.common.collect.Maps;
 import org.molgenis.data.Entity;
 import org.molgenis.data.annotation.cmd.CommandLineAnnotatorConfig;
 import org.molgenis.data.annotation.entity.impl.SnpEffAnnotator.Impact;
@@ -22,25 +23,22 @@ import org.springframework.stereotype.Component;
 @Component
 public class InheritedAnalysis
 {
+	private File familyAndChildSamplesFile;
+	private File vcfFile;
+	private File outputFile;
+
 	boolean printIds = false; // used in analyzeGene
 
-	public void go(File vcfFile, File familyAndChildSamplesFile, File outputFile) throws Exception
+	public List<Trio> readPedFile() throws IOException
 	{
-		List<Trio> trioList = readPedFile(familyAndChildSamplesFile);
-		analyzeVariants(vcfFile, outputFile, trioList);
-	}
+		Scanner scanner = new Scanner(familyAndChildSamplesFile);
+		List<Trio> trioList = newArrayList();
 
-	public List<Trio> readPedFile(File familyAndChildSamplesFile) throws IOException
-	{
-
-		Scanner scanPed = new Scanner(familyAndChildSamplesFile);
+		scanner.nextLine(); // skip header
 		String line = null;
-		List<Trio> trioList = Lists.newArrayList();
-
-		scanPed.nextLine(); // skip header
-		while (scanPed.hasNextLine())
+		while (scanner.hasNextLine())
 		{
-			line = scanPed.nextLine();
+			line = scanner.nextLine();
 			String[] lineSplit = line.split("\t", -1);
 			String family = lineSplit[0];
 			String child = lineSplit[1];
@@ -52,60 +50,36 @@ public class InheritedAnalysis
 			{
 				continue;
 			}
-
 			else
 			{
-				// add trios to map
+				// add trios to list
 				trioList.add(new Trio(family, child, father, mother));
 			}
-
 		}
-		scanPed.close();
+		scanner.close();
 		return trioList;
 	}
 
-	public void analyzeVariants(File vcfFile, File outputFile, List<Trio> trioList) throws Exception
+	public void analyzeVariants() throws Exception
 	{
-		PrintWriter pw = new PrintWriter(outputFile, "UTF-8");
+		List<Trio> trioList = readPedFile();
+		PrintWriter printWriter = new PrintWriter(outputFile, "UTF-8");
 
 		@SuppressWarnings("resource")
-		Iterator<Entity> vcf = new VcfRepository(vcfFile, "vcf").iterator();
+		Iterator<Entity> vcfRepo = new VcfRepository(vcfFile, "vcf").iterator();
 
 		Set<String> genesSeenForPreviousVariant = new HashSet<String>();
 
-		int count = 0;
-		while (vcf.hasNext())
+		while (vcfRepo.hasNext())
 		{
-			count++;
+			Entity record = vcfRepo.next();
 
-			// Print status after 100 lines
-			// if (count % 100 == 0)
-			// {
-			// System.out.println("Now at line: " + count);
-			// }
+			Set<String> genesSeenForNextVariant = getGenesFromAnnField(record.getString("ANN").split(","));
 
-			Entity record = vcf.next();
-
-			String[] multiAnn = record.getString("ANN").split(",");
-
-			// get ann field (genes), in hashset to get unique ones
-			// get samples and variants for trios
-			Set<String> genesSeenForNextVariant = new HashSet<String>();
-			Set<String> uniqGenes = new HashSet<String>();
-
-			for (String annField : multiAnn)
+			for (String gene : genesSeenForNextVariant)
 			{
-				String[] annSplit = annField.split("\\|", -1);
-				// String impact = annSplit[2];
-				String gene = annSplit[3];
-				uniqGenes.add(gene);
-			}
-
-			for (String uniqGene : uniqGenes)
-			{
-				genesSeenForNextVariant.add(uniqGene);
-				addSamplesToTrioForGene(record, trioList, uniqGene);
-
+				addAllVariantsToTrio(trioList, record, gene);
+				addSamplesToTrioForGene(record.getEntities(VcfRepository.SAMPLES), trioList, gene);
 			}
 
 			// find out which genes in the genesSeenForPreviousVariant list are NO LONGER present in the
@@ -114,9 +88,8 @@ public class InheritedAnalysis
 			{
 				if (!genesSeenForNextVariant.contains(gene))
 				{
-					// analyse within trios the date for this gene
-
-					analyzeGene(trioList, gene, pw);
+					// analyse within trios the data for this gene
+					analyzeGene(trioList, gene, printWriter);
 
 					// if (gene.equals("MTOR") || gene.equals("ANGPTL7"))
 					// {
@@ -140,51 +113,38 @@ public class InheritedAnalysis
 
 			// and copy genes
 			genesSeenForPreviousVariant.clear();
-			for (String gene : genesSeenForNextVariant)
-			{
-				genesSeenForPreviousVariant.add(gene);
-			}
+			genesSeenForPreviousVariant.addAll(genesSeenForNextVariant);
 
 		}
 
 	}
 
-	public void checkTrio(List<Trio> trioList) throws Exception
+	private Set<String> getGenesFromAnnField(String[] multiAnn)
 	{
+		// get ann field (genes), in hashset to get unique ones
+		// get samples and variants for trios
+		Set<String> genesSeenForNextVariant = new HashSet<>();
 
-		for (Trio trio : trioList)
+		for (String annField : multiAnn)
 		{
-			for (String gene : trio.getSamplesChild().keySet())
-			{
-				if (!(trio.getVariants().get(gene).size() == trio.getSamplesChild().get(gene).size()
-						&& trio.getVariants().get(gene).size() == trio.getSamplesFather().get(gene).size() && trio
-						.getVariants().get(gene).size() == trio.getSamplesMother().get(gene).size()))
-				{
-					throw new Exception("Something is going wrong here...");
-				}
-
-				// if (trio.getSamplesFather().containsKey(key) && trio.getSamplesMother().containsKey(key))
-				// {
-				// System.out.println("trio ok:" + trio.getChild_id() + ", gene: " + gene);
-				// System.out.println("Child: " + trio.getChild_id() + " gene: " + key + " sample: "
-				// + trio.getSamplesChild().get(key) + "\n" + "Father: " + trio.getFather_id() + " sample: "
-				// + trio.getSamplesFather().get(key) + "\n" + "Mother: " + trio.getMother_id() + " sample: "
-				// + trio.getSamplesMother().get(key) + "\n" + "variant: " + trio.getVariants().get(key));
-				// }
-			}
+			String[] annSplit = annField.split("\\|", -1);
+			String gene = annSplit[3];
+			genesSeenForNextVariant.add(gene);
 		}
+		return genesSeenForNextVariant;
 	}
 
-	public void addSamplesToTrioForGene(Entity record, List<Trio> trioList, String gene)
+	private void addAllVariantsToTrio(List<Trio> trioList, Entity record, String gene)
 	{
-		Iterable<Entity> sampleEntities = record.getEntities(VcfRepository.SAMPLES);
-
 		// For every trio, add all variants to map and use gene as key
 		for (Trio trio : trioList)
 		{
 			trio.addInfoToVariantMap(gene, record);
 		}
+	}
 
+	private void addSamplesToTrioForGene(Iterable<Entity> sampleEntities, List<Trio> trioList, String gene)
+	{
 		// For every sample in VCF, add all samples to right members of trio and use gene as key
 		sampleloop: for (Entity sample : sampleEntities)
 		{
@@ -215,6 +175,32 @@ public class InheritedAnalysis
 				{
 					continue;
 				}
+			}
+		}
+	}
+
+	public void checkTrio(List<Trio> trioList) throws Exception
+	{
+
+		for (Trio trio : trioList)
+		{
+			for (String gene : trio.getSamplesChild().keySet())
+			{
+				if (!(trio.getVariants().get(gene).size() == trio.getSamplesChild().get(gene).size()
+						&& trio.getVariants().get(gene).size() == trio.getSamplesFather().get(gene).size() && trio
+						.getVariants().get(gene).size() == trio.getSamplesMother().get(gene).size()))
+				{
+					throw new Exception("Something is going wrong here...");
+				}
+
+				// if (trio.getSamplesFather().containsKey(key) && trio.getSamplesMother().containsKey(key))
+				// {
+				// System.out.println("trio ok:" + trio.getChild_id() + ", gene: " + gene);
+				// System.out.println("Child: " + trio.getChild_id() + " gene: " + key + " sample: "
+				// + trio.getSamplesChild().get(key) + "\n" + "Father: " + trio.getFather_id() + " sample: "
+				// + trio.getSamplesFather().get(key) + "\n" + "Mother: " + trio.getMother_id() + " sample: "
+				// + trio.getSamplesMother().get(key) + "\n" + "variant: " + trio.getVariants().get(key));
+				// }
 			}
 		}
 	}
@@ -442,13 +428,13 @@ public class InheritedAnalysis
 				// geneFamilyCandidateCounts.get(gene).add(
 				// trio.getFamily_id() + "\t" + trio.getCandidatesForChildperGene().get(gene).size());
 				// }
-
+				//
 				// System.out.println("\n" + "Family id: " + trio.getFamily_id() + "\n" + "Gene: " + gene + "\n"
 				// + "Number of candidates: " + trio.getCandidatesForChildperGene().get(gene).size() + "\n");
 
-				pw.println("Family id: " + trio.getFamily_id() + "\n" + "Gene: " + gene + "\n"
-						+ "Number of candidates: " + trio.getCandidatesForChildperGene().get(gene).size() + "\n");
-				pw.flush();
+				// pw.println("Family id: " + trio.getFamily_id() + "\n" + "Gene: " + gene + "\n"
+				// + "Number of candidates: " + trio.getCandidatesForChildperGene().get(gene).size() + "\n");
+				// pw.flush();
 
 				printCandidates(trio.getCandidatesForChildperGene().get(gene), pw);
 
@@ -528,46 +514,45 @@ public class InheritedAnalysis
 		for (Candidate c : candidates)
 		{
 			// System.out.println(c.toString());
-			pw.println(c + "\n");
-			pw.flush();
+			// pw.println(c + "\n");
+			// pw.flush();
 		}
 	}
 
 	public static void main(String[] args) throws Exception
 	{
+		// context to get Spring working
 		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext("org.molgenis.data.annotation");
 		ctx.register(CommandLineAnnotatorConfig.class);
-		InheritedAnalysis main = ctx.getBean(InheritedAnalysis.class);
-		main.run(args);
+		InheritedAnalysis inheritedAnalyses = ctx.getBean(InheritedAnalysis.class);
+		inheritedAnalyses.parseCommandLineArgs(args);
+		inheritedAnalyses.analyzeVariants();
 		ctx.close();
 	}
 
-	public void run(String[] args) throws Exception
+	public void parseCommandLineArgs(String[] args) throws Exception
 	{
 		if (!(args.length == 3))
 		{
 			throw new Exception("Must supply 3 arguments");
 		}
 
-		File vcfFile = new File(args[0]);
+		vcfFile = new File(args[0]);
 		if (!vcfFile.isFile())
 		{
 			throw new Exception("VCF file does not exist or directory: " + vcfFile.getAbsolutePath());
 		}
 
-		File familyAndChildSamplesFile = new File(args[1]);
+		familyAndChildSamplesFile = new File(args[1]);
 		if (!familyAndChildSamplesFile.isFile())
 		{
 			throw new Exception("Family and child samples file does not exist or directory: "
 					+ familyAndChildSamplesFile.getAbsolutePath());
 		}
-		File outputFile = new File(args[2]);
+		outputFile = new File(args[2]);
 		if (!outputFile.isFile())
 		{
 			throw new Exception("output file does not exist or directory: " + outputFile.getAbsolutePath());
 		}
-
-		InheritedAnalysis ia = new InheritedAnalysis();
-		ia.go(vcfFile, familyAndChildSamplesFile, outputFile);
 	}
 }
