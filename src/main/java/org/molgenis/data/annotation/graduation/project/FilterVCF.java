@@ -11,11 +11,25 @@ import org.molgenis.data.vcf.utils.VcfUtils;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.stereotype.Component;
 
+/**
+ * This class filters a VCF file to receive a smaller VCF file which can be analyzed further.
+ * 
+ * @author mbijlsma
+ */
 @Component
 public class FilterVCF
 {
-	// First filtering of VCF file to receive a smaller VCF file which can be analyzed further
-	public void go(File vcfFile, File outputFile) throws Exception
+	/**
+	 * Filters the VCF file according to soe specified thresholds.
+	 * 
+	 * @param vcfFile
+	 *            the file to be filtered
+	 * @param outputFile
+	 *            the file the output must be written to
+	 * @throws Exception
+	 *             when printwriter or itarator cannot perfom correctly
+	 */
+	public void filterVCF(File vcfFile, File outputFile) throws Exception
 	{
 		@SuppressWarnings("resource")
 		PrintWriter pw = new PrintWriter(outputFile, "UTF-8");
@@ -30,11 +44,6 @@ public class FilterVCF
 		{
 			count++;
 			Entity record = vcf.next();
-
-			// if (count == 100)
-			// {
-			// break;
-			// }
 
 			// print number of lines scanned
 			if (count % 1000 == 0)
@@ -85,7 +94,6 @@ public class FilterVCF
 			}
 
 			// iterate over alternate alleles
-
 			for (int i = 0; i < altsplit.length; i++)
 			{
 				// ExAC (AF must be lower than 0.05)
@@ -130,17 +138,23 @@ public class FilterVCF
 
 				// convert to VCF entry and print to new file (true, all genotypes must be printed too)
 				String vcfEntry = VcfUtils.convertToVCF(record, true);
-				// System.out.println(vcfEntry);
 
 				pw.println(vcfEntry);
 				pw.flush();
 
 				break;
 			}
-
 		}
 	}
 
+	/**
+	 * The main method. Invokes run().
+	 * 
+	 * @param args
+	 *            the command line arguments
+	 * @throws Exception
+	 *             when arguments are incorrect
+	 */
 	public static void main(String[] args) throws Exception
 	{
 		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext("org.molgenis.data.annotation");
@@ -150,6 +164,14 @@ public class FilterVCF
 		ctx.close();
 	}
 
+	/**
+	 * Parses the command line arguments.
+	 * 
+	 * @param args
+	 *            the command line arguments
+	 * @throws Exception
+	 *             when file does not exists or length of arguments is incorrect
+	 */
 	public void run(String[] args) throws Exception
 	{
 		if (!(args.length == 2))
@@ -170,8 +192,6 @@ public class FilterVCF
 		}
 
 		FilterVCF fv = new FilterVCF();
-		fv.go(vcfFile, outputFile);
-
+		fv.filterVCF(vcfFile, outputFile);
 	}
-
 }

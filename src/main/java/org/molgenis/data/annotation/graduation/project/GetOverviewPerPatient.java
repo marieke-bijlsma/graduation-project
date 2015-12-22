@@ -1,6 +1,7 @@
 package org.molgenis.data.annotation.graduation.project;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -10,56 +11,43 @@ import org.elasticsearch.common.collect.Maps;
 
 public class GetOverviewPerPatient
 {
-	public void go(File vcfFile, File mvFile, File samplesFile) throws Exception
+	public Map<String, String> readSamplesFile(File samplesFile) throws Exception
 	{
 		Map<String, String> samplesWithSex = Maps.newHashMap();
-		Map<String, List<String>> infoPerPatient = Maps.newHashMap();
 
-		Scanner scanSamples = new Scanner(samplesFile);
+		Scanner s = new Scanner(samplesFile);
 		String samplesLine = null;
 
-		while (scanSamples.hasNextLine())
+		while (s.hasNextLine())
 		{
-			samplesLine = scanSamples.nextLine();
+			samplesLine = s.nextLine();
 			String[] lineSplit = samplesLine.split("\t", -1);
 			String sample = lineSplit[0];
 			String sex = lineSplit[1];
 			samplesWithSex.put(sample, sex);
 		}
-		scanSamples.close();
+		s.close();
+		return samplesWithSex;
+	}
+	
+	public void readMvFile(File mvFile, File vcfFile, Map<String, String> samplesWithSex) throws FileNotFoundException
+	{
+		Map<String, List<String>> infoPerPatient = Maps.newHashMap();
 		
-		
-		//TODO multiple genes: multiple CADD/ExAC
-		
-		Scanner scanMv = new Scanner(mvFile);
+		Scanner s = new Scanner(mvFile);
 		String mvLine = null;
-
-		scanMv.nextLine(); // skip header
-		while (scanMv.hasNextLine())
+		
+		s.nextLine(); // skip header
+		while (s.hasNextLine())
 		{
-			mvLine = scanMv.nextLine();
+			mvLine = s.nextLine();
 			String[] lineSplit = mvLine.split("\t", -1);
 
 			String key = lineSplit[7];
 			String impact = lineSplit[2];
-
 			String cadd = lineSplit[23];
 
-			String caddImpact = "";
-
-			// impact CADD score (high, medium, low
-			if (Double.parseDouble(cadd) >= 20)
-			{
-				caddImpact = "high";
-			}
-			else if (Double.parseDouble(cadd) > 10 && Double.parseDouble(cadd) < 20)
-			{
-				caddImpact = "medium";
-			}
-			else if (Double.parseDouble(cadd) <= 10)
-			{
-				caddImpact = "low";
-			}
+			String caddImpact = calculateCADD(cadd);
 
 			String childGT = lineSplit[5];
 			String alleles[] = childGT.split("/");
@@ -160,7 +148,28 @@ public class GetOverviewPerPatient
 			}
 
 		}
-		scanMv.close();
+		s.close();
+	}
+	
+	public String calculateCADD(String cadd) {
+		
+		String caddImpact = null;
+		
+		// impact CADD score (high, medium, low)
+		if (Double.parseDouble(cadd) >= 20)
+		{
+			caddImpact = "high";
+		}
+		else if (Double.parseDouble(cadd) > 10 && Double.parseDouble(cadd) < 20)
+		{
+			caddImpact = "medium";
+		}
+		else if (Double.parseDouble(cadd) <= 10)
+		{
+			caddImpact = "low";
+		}
+		
+		return caddImpact;
 	}
 
 	public static void main(String[] args) throws Exception
@@ -188,8 +197,9 @@ public class GetOverviewPerPatient
 			throw new Exception("Samples file does not exist or directory: " + samplesFile.getAbsolutePath());
 		}
 
-		GetOverviewPerPatient gop = new GetOverviewPerPatient();
-		gop.go(vcfFile, mvFile, samplesFile);
+		GetOverviewPerPatient overviewPatients = new GetOverviewPerPatient();
+		Map<String, String> samplesWithSex = overviewPatients.readSamplesFile(samplesFile);
+		overviewPatients.readMvFile(mvFile, vcfFile, samplesWithSex);
 
 	}
 

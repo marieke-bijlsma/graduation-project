@@ -1,30 +1,43 @@
 package org.molgenis.data.annotation.graduation.project;
 
 import java.io.File;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Scanner;
 
+import org.elasticsearch.common.collect.Lists;
 import org.elasticsearch.common.collect.Maps;
 
+/**
+ * This class counts the number of several impacts per patient. 
+ * The output is printed in matrix form for easy pasting in Excel (for calculations and coloring).
+ * Also, the output can be printed with context (for clinicians).
+ * 
+ * @author mbijlsma
+ */
 public class GetVariantsPerPatient
 {
-	Map<String, Integer> variantCountsPerPatient = Maps.newHashMap();
-	Map<String, List<String>> impactsPerPatient = Maps.newHashMap();
-	Map<String, List<Integer>> impactCountsPerPatient = Maps.newHashMap();
-
+	/**
+	 * Parses a VCF file and saves relevant information in HashMaps.
+	 * 
+	 * @param vcfFile the file to be parsed
+	 * @throws Exception if file does not exists or cannot be parsed
+	 */
 	public void readVCF(File vcfFile) throws Exception
 	{
+		Map<String, Integer> variantCountsPerPatient = Maps.newHashMap();
+		Map<String, List<String>> impactsPerPatient = Maps.newHashMap();
+
 		Scanner s = new Scanner(vcfFile);
 		String line = null;
 		s.nextLine(); // skip header
+
 		while (s.hasNextLine())
 		{
 			line = s.nextLine();
 			String[] lineSplit = line.split("\t", -1);
-			String key = lineSplit[7];
+			String key = lineSplit[7]; // sample ID patient
 			String impacts = lineSplit[2];
 			String[] impactSplit = impacts.split(",");
 			String impact = impactSplit[0];
@@ -50,12 +63,26 @@ public class GetVariantsPerPatient
 			}
 			else
 			{
-				List<String> entries = new ArrayList<String>();
+				List<String> entries = Lists.newArrayList();
 				entries.add(impact);
 				impactsPerPatient.put(key, entries);
 			}
 		}
 		s.close();
+		getImpactCountPerPatient(variantCountsPerPatient, impactsPerPatient);
+	}
+
+	/**
+	 * For every patient, the number of 4 different impacts are count.
+	 * 
+	 * @param variantCountsPerPatient list containing number of variants per patient
+	 * @param impactsPerPatient list containing impacts per patient
+	 */
+	public void getImpactCountPerPatient(Map<String, Integer> variantCountsPerPatient,
+			Map<String, List<String>> impactsPerPatient)
+	{
+
+		Map<String, List<Integer>> impactCountsPerPatient = Maps.newHashMap();
 
 		// for every patient
 		for (Map.Entry<String, List<String>> entry : impactsPerPatient.entrySet())
@@ -96,7 +123,7 @@ public class GetVariantsPerPatient
 				}
 
 				// empty list, add counts per impact -> in map with associated patient
-				List<Integer> allImpacts = new ArrayList<Integer>();
+				List<Integer> allImpacts = Lists.newArrayList();
 				allImpacts.add(countHigh);
 				allImpacts.add(countModerate);
 				allImpacts.add(countLow);
@@ -104,6 +131,18 @@ public class GetVariantsPerPatient
 				impactCountsPerPatient.put(patient, allImpacts);
 			}
 		}
+		printImpactCountsPerPatient(impactCountsPerPatient, variantCountsPerPatient);
+	}
+	
+/**
+ * Prints the number of several impacts per patient.
+ * 
+ * @param impactCountsPerPatient list containing impacts per patient
+ * @param variantCountsPerPatient list containing number of variants per patient
+ */
+	public void printImpactCountsPerPatient(Map<String, List<Integer>> impactCountsPerPatient,
+			Map<String, Integer> variantCountsPerPatient)
+	{
 		// print header
 		System.out.println("Sample id" + "\t" + "variant count" + "\t" + "high" + "\t" + "moderate" + "\t" + "low"
 				+ "\t" + "modifier");
@@ -134,13 +173,24 @@ public class GetVariantsPerPatient
 		}
 	}
 
+	/**
+	 * The main method. Invokes run().
+	 * 
+	 * @param args the command line arguments
+	 * @throws Exception when arguments are not correct
+	 */
 	public static void main(String[] args) throws Exception
 	{
 		GetVariantsPerPatient vp = new GetVariantsPerPatient();
 		vp.run(args);
-
 	}
 
+	/**
+	 * Parses the command line arguments.
+	 * 
+	 * @param args the command line arguments
+	 * @throws Exception when file does not exists or length is not right
+	 */
 	public void run(String[] args) throws Exception
 	{
 		if (!(args.length == 1))
@@ -151,12 +201,11 @@ public class GetVariantsPerPatient
 		File vcfFile = new File(args[0]);
 		if (!vcfFile.isFile())
 		{
-			throw new Exception("Input VCF file does not exist or directory: " + vcfFile.getAbsolutePath());
+			throw new Exception("Input VCF file does not exist or is not a directory: " + vcfFile.getAbsolutePath());
 		}
 
-		GetVariantsPerPatient vpp = new GetVariantsPerPatient();
-		vpp.readVCF(vcfFile);
-
+		GetVariantsPerPatient getVariants = new GetVariantsPerPatient();
+		getVariants.readVCF(vcfFile);
 	}
 
 }

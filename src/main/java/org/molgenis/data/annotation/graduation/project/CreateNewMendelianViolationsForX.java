@@ -9,61 +9,66 @@ import java.util.Scanner;
 
 import org.elasticsearch.common.collect.Maps;
 
+/**
+ * This class creates a new Mendelian Violation file by analyzing the X chromosome of boys. It prints the result to a
+ * new file.
+ * 
+ * @author mbijlsma
+ */
 public class CreateNewMendelianViolationsForX
 {
-
-	public static void main(String[] args) throws Exception
+	/**
+	 * Parses the PED file.
+	 * 
+	 * @param pedFile
+	 *            the file to be parsed
+	 * @return pedFamilyAndSex a map containing the family ID and sex of patient
+	 * @throws FileNotFoundException
+	 *             when file does not exists
+	 */
+	public Map<String, String> readPedFile(File pedFile) throws FileNotFoundException
 	{
-
-		File pedFile = new File(args[0]);
-		if (!pedFile.isFile())
-		{
-			throw new Exception("Ped file does not exist or directory: " + pedFile.getAbsolutePath());
-		}
-
-		File mvFile = new File(args[1]);
-		if (!mvFile.isFile())
-		{
-			throw new Exception("Mendelian violation file does not exist or directory: " + mvFile.getAbsolutePath());
-		}
-		File outputFile = new File(args[2]);
-		if (!outputFile.isFile())
-		{
-			throw new Exception("Output file does not exist or directory: " + outputFile.getAbsolutePath());
-		}
-
-		CreateNewMendelianViolationsForX cmv = new CreateNewMendelianViolationsForX();
-		cmv.run(pedFile, mvFile, outputFile);
-
-	}
-
-	public void run(File pedFile, File mvFile, File outputFile) throws FileNotFoundException,
-			UnsupportedEncodingException
-	{
-		PrintWriter pw = new PrintWriter(outputFile, "UTF-8");
-
-		Scanner scanPed = new Scanner(pedFile);
-		String pedLine = "";
 		Map<String, String> pedFamilyAndSex = Maps.newHashMap();
-		StringBuilder onlyXwithSex = new StringBuilder();
-		String[] Xlines = null;
+		Scanner s = new Scanner(pedFile);
+		String pedLine = null;
 
-		// Map with family ID and sex of patient
-		while (scanPed.hasNextLine())
+		while (s.hasNextLine())
 		{
-			pedLine = scanPed.nextLine();
+			pedLine = s.nextLine();
 			String[] PedLineSplit = pedLine.split("\t", -1);
 			pedFamilyAndSex.put(PedLineSplit[0], PedLineSplit[4]);
 		}
-		scanPed.close();
+		s.close();
+		return pedFamilyAndSex;
+	}
 
-		Scanner scanMv = new Scanner(mvFile);
+	/**
+	 * Parses the Mendelian Violation file.
+	 * 
+	 * @param mvFile
+	 *            the file to be parsed
+	 * @param outputFile
+	 *            the file where the "non-X" chromsomes are printed to
+	 * @param pedFamilyAndSex
+	 *            a map containing the family ID and sex of patient
+	 * @throws FileNotFoundException
+	 *             when file does not exists
+	 * @throws UnsupportedEncodingException
+	 *             when output file is not encoded correctly
+	 */
+	public void readMvFile(File mvFile, File outputFile, Map<String, String> pedFamilyAndSex)
+			throws FileNotFoundException, UnsupportedEncodingException
+	{
+
+		PrintWriter pw = new PrintWriter(outputFile, "UTF-8");
+
+		Scanner s = new Scanner(mvFile);
 		String mvLine = "";
 		StringBuilder onlyX = new StringBuilder();
 
-		while (scanMv.hasNextLine())
+		while (s.hasNextLine())
 		{
-			mvLine = scanMv.nextLine();
+			mvLine = s.nextLine();
 
 			// delete empty fields
 			if (mvLine.contains(".\t.\t.\t."))
@@ -86,7 +91,24 @@ public class CreateNewMendelianViolationsForX
 				pw.flush();
 			}
 		}
-		scanMv.close();
+		s.close();
+		getSexOfPatient(pw, onlyX, pedFamilyAndSex);
+	}
+
+	/**
+	 * Gets the right sex with the right patient.
+	 * 
+	 * @param pw
+	 *            printwriter where output is written to
+	 * @param onlyX
+	 *            a list containing only the lines from the MV file of X chromsome
+	 * @param pedFamilyAndSex
+	 *            a map containing the family ID and sex of patient
+	 */
+	public void getSexOfPatient(PrintWriter pw, StringBuilder onlyX, Map<String, String> pedFamilyAndSex)
+	{
+		String[] Xlines = null;
+		StringBuilder onlyXwithSex = new StringBuilder();
 
 		Xlines = onlyX.toString().split("\n");
 
@@ -120,7 +142,7 @@ public class CreateNewMendelianViolationsForX
 
 		// Read per line and get sex, pos and gt
 		String[] onlyXwithSexLines = onlyXwithSex.toString().split("\n");
-		int count=0;
+		int count = 0;
 		for (String Xline : onlyXwithSexLines)
 		{
 			String[] splittedLine = Xline.split("\t");
@@ -152,16 +174,64 @@ public class CreateNewMendelianViolationsForX
 			else
 			{
 				count++;
-//				System.out.println(Xline);
+				// System.out.println(Xline);
 				// print every line to new mendelian violations file, except sex
 				String withoutSex = Xline.replaceAll(splittedLine[17], "");
 				// remove last tab
-				
+
 				pw.println(Xline);
 				pw.flush();
 			}
 		}
-//		System.out.println(count);
+		// System.out.println(count);
 		pw.close();
+	}
+
+	/**
+	 * The main method. Invokes run().
+	 * 
+	 * @param args
+	 *            the command line arguments
+	 * @throws Exception
+	 *             when args are incorrect
+	 */
+	public static void main(String[] args) throws Exception
+	{
+		CreateNewMendelianViolationsForX cmv = new CreateNewMendelianViolationsForX();
+		cmv.run(args);
+
+	}
+
+	/**
+	 * Parses the command line arguments.
+	 * 
+	 * @param args
+	 *            the command line arguments
+	 * @throws Exception
+	 *             when file does not exist or length of arguments is incorrect
+	 */
+	public void run(String[] args) throws Exception
+	{
+		File pedFile = new File(args[0]);
+		if (!pedFile.isFile())
+		{
+			throw new Exception("Ped file does not exist or directory: " + pedFile.getAbsolutePath());
+		}
+
+		File mvFile = new File(args[1]);
+		if (!mvFile.isFile())
+		{
+			throw new Exception("Mendelian violation file does not exist or directory: " + mvFile.getAbsolutePath());
+		}
+		File outputFile = new File(args[2]);
+		if (!outputFile.isFile())
+		{
+			throw new Exception("Output file does not exist or directory: " + outputFile.getAbsolutePath());
+		}
+
+		CreateNewMendelianViolationsForX cmv = new CreateNewMendelianViolationsForX();
+		Map<String, String> pedFamilyAndSex = cmv.readPedFile(pedFile);
+		cmv.readMvFile(mvFile, outputFile, pedFamilyAndSex);
+
 	}
 }
