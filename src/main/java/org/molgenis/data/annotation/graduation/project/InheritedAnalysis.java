@@ -2,11 +2,19 @@ package org.molgenis.data.annotation.graduation.project;
 
 import static com.google.common.collect.Sets.newHashSet;
 import static org.elasticsearch.common.collect.Lists.newArrayList;
+import static org.elasticsearch.common.collect.Maps.newHashMap;
+import static org.molgenis.data.annotation.graduation.project.GenotypeUtils.compoundHeterozygousAnalysisFather;
+import static org.molgenis.data.annotation.graduation.project.GenotypeUtils.compoundHeterozygousAnalysisMother;
+import static org.molgenis.data.annotation.graduation.project.GenotypeUtils.heterozygousDenovoAnalysis;
+import static org.molgenis.data.annotation.graduation.project.GenotypeUtils.homozygousAnalysis;
+import static org.molgenis.data.annotation.graduation.project.GenotypeUtils.homozygousDenovoAnalysis;
+import static org.molgenis.data.annotation.graduation.project.GenotypeUtils.isDepthCorrect;
+import static org.molgenis.data.annotation.graduation.project.GenotypeUtils.isGenotypeCorrect;
 
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.security.GeneralSecurityException;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -14,7 +22,6 @@ import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
 
-import org.elasticsearch.common.collect.Lists;
 import org.molgenis.data.Entity;
 import org.molgenis.data.annotation.cmd.CommandLineAnnotatorConfig;
 import org.molgenis.data.annotation.entity.impl.SnpEffAnnotator.Impact;
@@ -28,19 +35,8 @@ public class InheritedAnalysis
 {
 	private File familyAndChildSamplesFile;
 	private File vcfFile;
-	private File outputFile;
-
-	private String heterozygous_1;
-	private String heterozygous_2;
-	private String heterozygous_3;
-	private String heterozygous_4;
-
-	private String homozygous_1;
-	private String homozygous_2;
-	private String homozygous_3;
-	private String homozygous_4;
-
-	boolean printIds = false; // used in analyzeGene
+	private File candidateOutputFile;
+	private File matrixOutputFile;
 
 	public List<Trio> readPedFile() throws IOException
 	{
@@ -73,48 +69,46 @@ public class InheritedAnalysis
 		return trioList;
 	}
 
-	@SuppressWarnings("resource")
-	public void analyzeVariants() throws Exception
+	public void readAndProcessVcfFile() throws Exception
 	{
 		List<Trio> trioList = readPedFile();
 
-		Set<String> genesSeenInVcfFile = newHashSet(); // mac shift m
+		Set<String> genesSeenForPreviousVariant = newHashSet(); // mac shift m
+
+		@SuppressWarnings("resource")
 		Iterator<Entity> vcfRepository = new VcfRepository(vcfFile, "vcf").iterator();
+
 		int count = 0;
 
 		while (vcfRepository.hasNext())
 		{
 			count++;
 			Entity record = vcfRepository.next();
-			Set<String> genesSeenInThisRecord = getGenesFromAnnField(record.getString("ANN").split(","));
+			Set<String> genesSeenForCurrentVariant = getGenesFromAnnField(record.getString("ANN").split(","));
 
-			for (String gene : genesSeenInThisRecord)
+			for (String gene : genesSeenForCurrentVariant)
 			{
 				addAllVariantsToTrio(trioList, record, gene);
 				addSamplesToTrioForGene(record.getEntities(VcfRepository.SAMPLES), trioList, gene);
-				genesSeenInVcfFile.add(gene);
 			}
 
-			if (count == 2000) break;
-		}
-
-		// find out which genes in the genesSeenForPreviousVariant list are NO LONGER present in the
-		// genesSeenForNextVariant list
-		for (String gene : genesSeenInVcfFile)
-		{
-			analyzeGene(trioList, gene);
-
-			// then remove data for this gene
-			// delete from trio: samples & variants
-			for (Trio trio : trioList)
+			if (count % 1000 == 0)
 			{
-				trio.getVariants().remove(gene);
-				trio.getSamplesChild().remove(gene);
-				trio.getSamplesFather().remove(gene);
-				trio.getSamplesMother().remove(gene);
+				System.out.println("scanned over " + count + " lines");
 			}
-		}
 
+			// find out which genes in the genesSeenForPreviousVariant list are NO LONGER present in the
+			// genesSeenForNextVariant list
+			for (String gene : genesSeenForPreviousVariant)
+			{
+				if (!genesSeenForCurrentVariant.contains(gene))
+				{
+					analyzeGene(trioList, gene);
+				}
+			}
+			genesSeenForPreviousVariant.clear();
+			genesSeenForPreviousVariant.addAll(genesSeenForCurrentVariant);
+		}
 	}
 
 	private Set<String> getGenesFromAnnField(String[] multiAnn)
@@ -186,11 +180,9 @@ public class InheritedAnalysis
 	 */
 	public void analyzeGene(List<Trio> trioList, String gene) throws Exception
 	{
-		PrintWriter printWriter = new PrintWriter(outputFile, "UTF-8");
-		String FORMAT_DP = "DP";
 
-		// PRINT MATRIX
-		// Map<String, List<String>> geneFamilyCandidateCounts = Maps.newHashMap();
+		// Used for creating matrix
+		Map<String, List<String>> geneFamilyCandidateCounts = newHashMap();
 
 		// look for homozygous in child && heterozygous in parents
 
@@ -211,6 +203,9 @@ public class InheritedAnalysis
 			int variantIndex = 0;
 			for (Entity variant : variants.get(gene))
 			{
+
+				String FORMAT_DP = "DP";
+
 				Entity sampleChild = childSamples.get(gene).get(variantIndex);
 				Entity sampleFather = fatherSamples.get(gene).get(variantIndex);
 				Entity sampleMother = motherSamples.get(gene).get(variantIndex);
@@ -243,7 +238,7 @@ public class InheritedAnalysis
 					// because alt index = 0 for the first alt add 1
 					int altIndex = i + 1;
 
-					updateHomozygousAndHeterozygousValues(altIndex);
+					GenotypeUtils.updateHomozygousAndHeterozygousValues(altIndex);
 
 					if (homozygousAnalysis(childGenotype, fatherGenotype, motherGenotype))
 					{
@@ -269,17 +264,21 @@ public class InheritedAnalysis
 							childAndMotherHet += 1;
 						}
 
-						Candidate candidate = new Candidate(Candidate.InheritanceMode.COMPOUND_HET, altsplit[i],
-								variant, sampleChild, sampleFather, sampleMother);
+						Candidate candidate = new Candidate(Candidate.InheritanceMode.COMPOUND_HET, childGenotype,
+								fatherGenotype, motherGenotype, altAlleles, altsplit[i], impact);
+						addInfomationToCandidate(candidate, variant);
 						temporaryCandidates.add(candidate);
 					}
 
-					Candidate candidate = new Candidate(inheritanceMode, altsplit[i], variant, sampleChild,
-							sampleFather, sampleMother);
-					trio.addCandidate(gene, candidate);
-
+					if (inheritanceMode != null)
+					{
+						Candidate candidate = new Candidate(inheritanceMode, childGenotype, fatherGenotype,
+								motherGenotype, altAlleles, altsplit[i], impact);
+						addInfomationToCandidate(candidate, variant);
+						trio.addCandidate(gene, candidate);
+					}
 				}
-				
+
 				// next variant
 				variantIndex++;
 			}
@@ -297,249 +296,72 @@ public class InheritedAnalysis
 				}
 			}
 
-			if (trio.getCandidatesForChildperGene().get(gene) != null)
-			{
-				// PRINT MATRIX
-				// if (!geneFamilyCandidateCounts.containsKey(gene))
-				// {
-				// List<String> familyList = Lists.newArrayList();
-				//
-				// familyList.add(trio.getFamily_id() + "\t" + trio.getCandidatesForChildperGene().get(gene).size());
-				// geneFamilyCandidateCounts.put(gene, familyList);
-				//
-				// }
-				// else
-				// {
-				// geneFamilyCandidateCounts.get(gene).add(
-				// trio.getFamily_id() + "\t" + trio.getCandidatesForChildperGene().get(gene).size());
-				// }
-				//
-				System.out.println("\n" + "Family id: " + trio.getFamily_id() + "\n" + "Gene: " + gene + "\n"
-						+ "Number of candidates: " + trio.getCandidatesForChildperGene().get(gene).size() + "\n");
+			addTrioToMatrix(gene, geneFamilyCandidateCounts, trio);
 
-				// pw.println("Family id: " + trio.getFamily_id() + "\n" + "Gene: " + gene + "\n"
-				// + "Number of candidates: " + trio.getCandidatesForChildperGene().get(gene).size() + "\n");
-				// pw.flush();
-
-				printCandidates(trio.getCandidatesForChildperGene().get(gene), printWriter);
-
-				// break;
-
-				// impacts can be added to Candidate object (cDNA/impact/effect/CADD/ExAC/1000G/GoNL)
-			}
-			// PRINT MATRIX
-			// else
-			// {
-			// if (!geneFamilyCandidateCounts.containsKey(gene))
-			// {
-			// List<String> familyList = Lists.newArrayList();
-			// familyList.add(trio.getFamily_id() + "\t" + 0);
-			// geneFamilyCandidateCounts.put(gene, familyList);
-			// }
-			// else
-			// {
-			// geneFamilyCandidateCounts.get(gene).add(trio.getFamily_id() + "\t" + 0);
-			// }
-			//
-			// }
-
+			// then remove data for this gene
+			// delete from trio: samples & variants
+			trio.getVariants().remove(gene);
+			trio.getSamplesChild().remove(gene);
+			trio.getSamplesFather().remove(gene);
+			trio.getSamplesMother().remove(gene);
 		}
-		// PRINT MATRIX
-		// for (String geneSymbol : geneFamilyCandidateCounts.keySet())
-		// {
-		// List<String> fam_ids = Lists.newArrayList();
-		//
-		// List<String> counts = Lists.newArrayList();
-		//
-		// for (String famAndCount : geneFamilyCandidateCounts.get(geneSymbol))
-		// {
-		// String[] split = famAndCount.split("\t");
-		// String fam_id = split[0];
-		// String count = split[1];
-		//
-		// fam_ids.add(fam_id + "\t");
-		// counts.add(count + "\t");
-		//
-		// }
 
-		// if (printIds == false) // print fam_ids once!
-		// {
-		// remove brackets and commas
-		// String familyAsString = fam_ids.toString().replaceAll("^\\[", "").replaceAll("\\]$", "")
-		// .replace(",", "");
-		// System.out.println("\t" + familyAsString);
-		// printIds = true;
-		// }
-		// PRINT MATRIX
-		// remove brackets and commas
-		// String countsAsString = counts.toString().replaceAll("^\\[", "").replaceAll("\\]$", "").replace(",", "");
-		// System.out.println(geneSymbol + "\t" + countsAsString);
-		// }
-
+		printMatrix(geneFamilyCandidateCounts);
 	}
 
-	/**
-	 * look for de novo hom
-	 * 
-	 * @param childGenotype
-	 * @param fatherGenotype
-	 * @param motherGenotype
-	 * @return
-	 */
-	private boolean homozygousDenovoAnalysis(String childGenotype, String fatherGenotype, String motherGenotype)
+	private void addInfomationToCandidate(Candidate candidate, Entity variant)
 	{
+		candidate.setChrom(variant.getString(VcfRepository.CHROM));
+		candidate.setPos(variant.getString(VcfRepository.POS));
 
-		return (
-		// 1/1, 0/1, 0/0
-		(childGenotype.equals(homozygous_1) || childGenotype.equals(homozygous_2))
-				&& (fatherGenotype.equals(heterozygous_1) || fatherGenotype.equals(heterozygous_2)
-						|| fatherGenotype.equals(heterozygous_3) || fatherGenotype.equals(heterozygous_4)) && (motherGenotype
-				.equals(homozygous_3) || motherGenotype.equals(homozygous_4)))
+		String annField = variant.getString("ANN");
+		String[] annSplit = annField.split("\\|");
 
-				// OR 1/1,0/0, 0/1
-				|| (childGenotype.equals(homozygous_1) || childGenotype.equals(homozygous_2))
-				&& (fatherGenotype.equals(homozygous_3) || fatherGenotype.equals(homozygous_4))
-				&& (motherGenotype.equals(heterozygous_1) || motherGenotype.equals(heterozygous_2)
-						|| motherGenotype.equals(heterozygous_3) || motherGenotype.equals(heterozygous_4));
-	}
+		candidate.setEffect(annSplit[1]);
+		candidate.setcDNA(annSplit[9]);
 
-	/**
-	 * look for de novo het with genotypes 1/0, 0/0, 0/0
-	 * 
-	 * @param childGenotype
-	 * @param fatherGenotype
-	 * @param motherGenotype
-	 * @return
-	 */
-	private boolean heterozygousDenovoAnalysis(String childGenotype, String fatherGenotype, String motherGenotype)
-	{
-		return (childGenotype.equals(heterozygous_1) || childGenotype.equals(heterozygous_2)
-				|| childGenotype.equals(heterozygous_3) || childGenotype.equals(heterozygous_4))
-				&& (fatherGenotype.equals(homozygous_3) || fatherGenotype.equals(homozygous_4))
-				&& (motherGenotype.equals(homozygous_3) || motherGenotype.equals(homozygous_4));
-	}
+		candidate.setExac_af_STR(variant.get("EXAC_AF") == null ? "-" : variant.getString("EXAC_AF"));
+		candidate.setExac_ac_hom_STR(variant.get("EXAC_AC_HOM") == null ? "-" : variant.getString("EXAC_AC_HOM"));
+		candidate.setExac_ac_het_STR(variant.get("EXAC_AC_HET") == null ? "-" : variant.getString("EXAC_AC_HET"));
 
-	/**
-	 * homozygous child (not reference) && heterozygous parents
-	 * 
-	 * @param childGenotype
-	 * @param fatherGenotype
-	 * @param motherGenotype
-	 * @return
-	 */
-	private boolean homozygousAnalysis(String childGenotype, String fatherGenotype, String motherGenotype)
-	{
-		return ((childGenotype.equals(homozygous_1) || childGenotype.equals(homozygous_2)))
-				&& ((fatherGenotype.equals(heterozygous_1) || fatherGenotype.equals(heterozygous_2)
-						|| fatherGenotype.equals(heterozygous_3) || fatherGenotype.equals(heterozygous_4)) && (motherGenotype
-						.equals(heterozygous_1)
-						|| motherGenotype.equals(heterozygous_2)
-						|| motherGenotype.equals(heterozygous_3) || motherGenotype.equals(heterozygous_4)));
-	}
+		String gonl_af_STR = null;
 
-	/**
-	 * TODO
-	 * 
-	 * @param childGenotype
-	 * @param fatherGenotype
-	 * @param motherGenotype
-	 * @return
-	 */
-	private boolean compoundHeterozygousAnalysisFather(String childGenotype, String fatherGenotype,
-			String motherGenotype)
-	{
-		// look for compound het
-
-		// Same gene, two or more variants
-		// They can't be all heterozygous
-		// They can't be all homozygous
-		// Child must be heterozygous
-		// One of parents must be at least one time heterozygous for variant but not for the
-		// same
-		// variant
-		// variant1: father: 0/1, mother 0/0
-		// variant2: father 0/0, mother 0/1
-
-		return (childGenotype.equals(heterozygous_1) || childGenotype.equals(heterozygous_2)
-				|| childGenotype.equals(heterozygous_3) || childGenotype.equals(heterozygous_4))
-				&& (fatherGenotype.equals(heterozygous_1) || fatherGenotype.equals(heterozygous_2)
-						|| fatherGenotype.equals(heterozygous_3) || fatherGenotype.equals(heterozygous_4))
-				&& (motherGenotype.equals(homozygous_3) || motherGenotype.equals(homozygous_4));
-
-	}
-
-	private boolean compoundHeterozygousAnalysisMother(String childGenotype, String fatherGenotype,
-			String motherGenotype)
-	{
-		// look for compound het
-
-		// Same gene, two or more variants
-		// They can't be all heterozygous
-		// They can't be all homozygous
-		// Child must be heterozygous
-		// One of parents must be at least one time heterozygous for variant but not for the
-		// same
-		// variant
-		// variant1: father: 0/1, mother 0/0
-		// variant2: father 0/0, mother 0/1
-
-		return (childGenotype.equals(heterozygous_1) || childGenotype.equals(heterozygous_2)
-				|| childGenotype.equals(heterozygous_3) || childGenotype.equals(heterozygous_4))
-				&& (fatherGenotype.equals(homozygous_3) || fatherGenotype.equals(homozygous_4))
-				&& (motherGenotype.equals(heterozygous_1) || motherGenotype.equals(heterozygous_2)
-						|| motherGenotype.equals(heterozygous_3) || motherGenotype.equals(heterozygous_4));
-	}
-
-	private void updateHomozygousAndHeterozygousValues(int altIndex)
-	{
-		// define all heterozygous and homozygous combinations (phased and unphased)
-
-		heterozygous_1 = "0/" + altIndex;
-		heterozygous_2 = altIndex + "/0";
-		heterozygous_3 = "0|" + altIndex;
-		heterozygous_4 = altIndex + "|0";
-
-		// For child in homozygous analysis
-		homozygous_1 = altIndex + "/" + altIndex;
-		homozygous_2 = altIndex + "|" + altIndex;
-
-		// For parents in compound het analysis
-		homozygous_3 = "0/0";
-		homozygous_4 = "0|0";
-	}
-
-	private boolean isGenotypeCorrect(String childGenotype, String fatherGenotype, String motherGenotype)
-	{
-		String MISSING_GT = "./.";
-
-		// check for missing genotypes
-		if ((childGenotype.equals(MISSING_GT)) || (fatherGenotype.equals(MISSING_GT))
-				|| (motherGenotype.equals(MISSING_GT)))
+		if (variant.getString("GoNL_AF").equals(".") || variant.getString("GoNL_AF").equals(".|.")
+				|| variant.get("GoNL_AF") == null)
 		{
-			return false;
+			gonl_af_STR = "-";
 		}
-
-		// check if genotype equals reference
-		if (childGenotype.equals("0/0") || childGenotype.equals("0|0"))
+		else
 		{
-			return false;
+			gonl_af_STR = variant.getString("GoNL_AF");
 		}
 
-		return true;
+		candidate.setGonl_af_STR(gonl_af_STR);
+		candidate.setThousandG_af_STR(variant.get("Thousand_Genomes_AF") == null ? "-" : variant
+				.getString("Thousand_Genomes_AF"));
+		candidate.setCadd(variant.get("CADD_SCALED") == null ? "-" : variant.getString("CADD_SCALED"));
 	}
 
-	private boolean isDepthCorrect(String childDepth, String fatherDepth, String motherDepth)
+	private void addTrioToMatrix(String gene, Map<String, List<String>> geneFamilyCandidateCounts, Trio trio)
+			throws IOException
 	{
-		// Get depth for every member of trio for the variant and filter whole trio if one member
-		// has a depth below 10
-
-		if ((Integer.parseInt(childDepth) < 10 || Integer.parseInt(fatherDepth) < 10)
-				|| Integer.parseInt(motherDepth) < 10)
+		int size = 0;
+		if (trio.getCandidatesForChildperGene().get(gene) != null)
 		{
-			return false;
+			size = trio.getCandidatesForChildperGene().get(gene).size();
+			printCandidates(trio.getCandidatesForChildperGene().get(gene), trio, gene);
 		}
 
-		return true;
+		if (!geneFamilyCandidateCounts.containsKey(gene))
+		{
+			List<String> familyList = newArrayList();
+			familyList.add(trio.getFamily_id() + "\t" + size);
+			geneFamilyCandidateCounts.put(gene, familyList);
+		}
+		else
+		{
+			geneFamilyCandidateCounts.get(gene).add(trio.getFamily_id() + "\t" + size);
+		}
 	}
 
 	// Get impacts for gene and allele
@@ -555,14 +377,59 @@ public class InheritedAnalysis
 		return impact;
 	}
 
-	public void printCandidates(List<Candidate> candidates, PrintWriter pw)
+	private void printCandidates(List<Candidate> candidates, Trio trio, String gene) throws IOException
 	{
-		for (Candidate c : candidates)
+		FileWriter fileWriter = new FileWriter(candidateOutputFile, true);
+		BufferedWriter bufferedWriter = new BufferedWriter(fileWriter);
+
+		bufferedWriter.append("Family id: " + trio.getFamily_id() + "\n" + "Gene: " + gene + "\n"
+				+ "Number of candidates: " + trio.getCandidatesForChildperGene().get(gene).size() + "\n");
+
+		// impacts can be added to Candidate object (cDNA/impact/effect/CADD/ExAC/1000G/GoNL)
+		for (Candidate candidate : candidates)
 		{
-			System.out.println(c.toString());
-			// pw.println(c + "\n");
-			// pw.flush();
+			bufferedWriter.append(candidate + "\n");
 		}
+
+		bufferedWriter.close();
+	}
+
+	private void printMatrix(Map<String, List<String>> geneFamilyCandidateCounts) throws IOException
+	{
+		boolean printIds = false; // used in analyzeGene
+		FileWriter fileWriter = new FileWriter(matrixOutputFile, true);
+		BufferedWriter bufferedWriter = new BufferedWriter(fileWriter);
+
+		for (String geneSymbol : geneFamilyCandidateCounts.keySet())
+		{
+			List<String> fam_ids = newArrayList();
+			List<String> counts = newArrayList();
+
+			for (String famAndCount : geneFamilyCandidateCounts.get(geneSymbol))
+			{
+				String[] split = famAndCount.split("\t");
+				String fam_id = split[0];
+				String count = split[1];
+
+				fam_ids.add(fam_id + "\t");
+				counts.add(count + "\t");
+
+			}
+			// print fam_ids once!
+			if (printIds == false)
+			{
+				// remove brackets and commas
+				String familyAsString = fam_ids.toString().replaceAll("^\\[", "").replaceAll("\\]$", "")
+						.replace(",", "");
+				bufferedWriter.append("\t" + familyAsString);
+				printIds = true;
+			}
+
+			// remove brackets and commas
+			String countsAsString = counts.toString().replaceAll("^\\[", "").replaceAll("\\]$", "").replace(",", "");
+			bufferedWriter.append(geneSymbol + "\t" + countsAsString);
+		}
+		bufferedWriter.close();
 	}
 
 	public static void main(String[] args) throws Exception
@@ -573,16 +440,16 @@ public class InheritedAnalysis
 
 		InheritedAnalysis inheritedAnalyses = ctx.getBean(InheritedAnalysis.class);
 		inheritedAnalyses.parseCommandLineArgs(args);
-		inheritedAnalyses.analyzeVariants();
+		inheritedAnalyses.readAndProcessVcfFile();
 
 		ctx.close();
 	}
 
-	public void parseCommandLineArgs(String[] args) throws Exception
+	private void parseCommandLineArgs(String[] args) throws Exception
 	{
-		if (!(args.length == 3))
+		if (!(args.length == 4))
 		{
-			throw new Exception("Must supply 3 arguments");
+			throw new Exception("Must supply 4 arguments");
 		}
 
 		vcfFile = new File(args[0]);
@@ -597,10 +464,15 @@ public class InheritedAnalysis
 			throw new Exception("Family and child samples file does not exist or directory: "
 					+ familyAndChildSamplesFile.getAbsolutePath());
 		}
-		outputFile = new File(args[2]);
-		if (!outputFile.isFile())
+		candidateOutputFile = new File(args[2]);
+		if (!candidateOutputFile.isFile())
 		{
-			throw new Exception("output file does not exist or directory: " + outputFile.getAbsolutePath());
+			throw new Exception("output file does not exist or directory: " + candidateOutputFile.getAbsolutePath());
+		}
+		matrixOutputFile = new File(args[3]);
+		if (!matrixOutputFile.isFile())
+		{
+			throw new Exception("output file does not exist or directory: " + matrixOutputFile.getAbsolutePath());
 		}
 	}
 }

@@ -1,6 +1,6 @@
 package org.molgenis.data.annotation.graduation.project;
 
-import org.molgenis.data.Entity;
+import org.molgenis.data.annotation.entity.impl.SnpEffAnnotator.Impact;
 
 public class Candidate
 {
@@ -16,70 +16,52 @@ public class Candidate
 		DENOVO_HOM // parent e.g. 0/1 + 0/0, child 1/1
 	}
 
-	@Override
-	public String toString()
-	{
-		String annField = variant.getString("ANN");
-		String[] annSplit = annField.split("\\|");
-
-		String effect = annSplit[1];
-		String impact = annSplit[2];
-		String cDNA = annSplit[9];
-
-		String exac_af_STR = variant.get("EXAC_AF") == null ? "-" : variant.get("EXAC_AF").toString();
-		String exac_ac_hom_STR = variant.get("EXAC_AC_HOM") == null ? "-" : variant.get("EXAC_AC_HOM").toString();
-		String exac_ac_het_STR = variant.get("EXAC_AC_HET") == null ? "-" : variant.get("EXAC_AC_HET").toString();
-
-		String gonl_af_STR = null;
-
-		if (variant.get("GoNL_AF").toString().equals(".") || variant.get("GoNL_AF").toString().equals(".|.") || variant.get("GoNL_AF") == null)
-		{
-			gonl_af_STR = "-";
-		}
-		else
-		{
-			gonl_af_STR = variant.get("GoNL_AF").toString();
-		}
-
-		String thousandG_af_STR = variant.get("Thousand_Genomes_AF") == null ? "-" : variant.get("Thousand_Genomes_AF")
-				.toString();
-		String cadd = variant.get("CADD_SCALED") == null ? "-" : variant.get("CADD_SCALED").toString();
-
-		return "Inheritance mode: " + inheritanceMode + "\n" + "Chromosome and position: "
-				+ variant.getString("#CHROM") + ":" + variant.getString("POS") + "\n" + "Alt allele(s): "
-				+ variant.getString("ALT") + "\n" + "Affected allele: " + affectedAlelle + "\n"
-				+ "Child, father, mother genotypes: " + childGenotype.get("GT").toString() + ", "
-				+ fatherGenotype.get("GT").toString() + ", " + motherGenotype.get("GT").toString() + "\n" + "Impact: "
-				+ impact + " (" + effect + ", " + cDNA + ") " + "\n" + "ExAC AF: " + exac_af_STR + ", ExAC HOM: "
-				+ exac_ac_hom_STR + ", ExAC HET: " + exac_ac_het_STR + "\n" + "GoNL: " + gonl_af_STR + "\n" + "1000G: "
-				+ thousandG_af_STR + "\n" + "CADD: " + cadd + "\n";
-	}
-
 	private InheritanceMode inheritanceMode;
 
 	// select only the variants that apply to this particular candidate
-	private String affectedAlelle;
-	private Entity variant;
-	private Entity childGenotype;
-	private Entity fatherGenotype;
-	private Entity motherGenotype;
+	private String chrom;
+	private String pos;
+	private String altAlleles;
+	private String affectedAllele;
+	private Impact impact;
+	private String effect;
+	private String cDNA;
+	private String exac_af_STR;
+	private String exac_ac_hom_STR;
+	private String exac_ac_het_STR;
+	private String gonl_af_STR;
+	private String thousandG_af_STR;
+	private String cadd;
+	private String childGenotype;
+	private String fatherGenotype;
+	private String motherGenotype;
 
-	public Candidate(InheritanceMode inheritanceMode, String affectedAllele, Entity variant, Entity childGenotype,
-			Entity fatherGenotype, Entity motherGenotype)
+	public Candidate(InheritanceMode inheritanceMode, String childGenotype, String fatherGenotype, String motherGenotype, String altAlleles,
+			String affectedAllele, Impact impact)
 	{
-		super();
 		this.inheritanceMode = inheritanceMode;
-		this.affectedAlelle = affectedAllele;
-		this.variant = variant;
 		this.childGenotype = childGenotype;
 		this.fatherGenotype = fatherGenotype;
 		this.motherGenotype = motherGenotype;
-
+		this.altAlleles = altAlleles;
+		this.affectedAllele = affectedAllele;
+		this.impact = impact;
 	}
 
-	public InheritanceMode getInheritanceMode()
+	@Override
+	public String toString()
 	{
-		return inheritanceMode;
+		return "Inheritance mode: " + inheritanceMode + "\n" + "Chromosome and position: " + chrom + ":" + pos + "\n"
+				+ "Alt allele(s): " + altAlleles + "\n" + "Affected allele: " + affectedAllele + "\n"
+				+ "Child, father, mother genotypes: " + childGenotype + ", " + fatherGenotype + ", " + motherGenotype
+				+ "\n" + "Impact: " + impact + " (" + effect + ", " + cDNA + ") " + "\n" + "ExAC AF: " + exac_af_STR
+				+ ", ExAC HOM: " + exac_ac_hom_STR + ", ExAC HET: " + exac_ac_het_STR + "\n" + "GoNL: " + gonl_af_STR
+				+ "\n" + "1000G: " + thousandG_af_STR + "\n" + "CADD: " + cadd + "\n";
+	}
+
+	public void setChrom(String chrom)
+	{
+		this.chrom = chrom;
 	}
 
 	public void setInheritanceMode(InheritanceMode inheritanceMode)
@@ -87,29 +69,49 @@ public class Candidate
 		this.inheritanceMode = inheritanceMode;
 	}
 
-	public Entity getVariant()
+	public void setPos(String pos)
 	{
-		return variant;
+		this.pos = pos;
 	}
 
-	public Entity getFatherGenotype()
+	public void setEffect(String effect)
 	{
-		return fatherGenotype;
+		this.effect = effect;
 	}
 
-	public Entity getMotherGenotype()
+	public void setcDNA(String cDNA)
 	{
-		return motherGenotype;
+		this.cDNA = cDNA;
 	}
 
-	public Entity getChildGenotype()
+	public void setExac_af_STR(String exac_af_STR)
 	{
-		return childGenotype;
+		this.exac_af_STR = exac_af_STR;
 	}
 
-	public String getAffectedAlelle()
+	public void setExac_ac_hom_STR(String exac_ac_hom_STR)
 	{
-		return affectedAlelle;
+		this.exac_ac_hom_STR = exac_ac_hom_STR;
+	}
+
+	public void setExac_ac_het_STR(String exac_ac_het_STR)
+	{
+		this.exac_ac_het_STR = exac_ac_het_STR;
+	}
+
+	public void setGonl_af_STR(String gonl_af_STR)
+	{
+		this.gonl_af_STR = gonl_af_STR;
+	}
+
+	public void setThousandG_af_STR(String thousandG_af_STR)
+	{
+		this.thousandG_af_STR = thousandG_af_STR;
+	}
+
+	public void setCadd(String cadd)
+	{
+		this.cadd = cadd;
 	}
 
 }
