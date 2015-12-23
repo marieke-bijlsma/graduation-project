@@ -38,7 +38,7 @@ public class MergeVCFwithCADD
 			caddLine = scanCadd.nextLine();
 			String[] lineSplit = caddLine.split("\t", -1);
 
-			// get chr, pos and cadd score and add to map
+			// get chromosome, pos and cadd score and add to map
 			String caddChr = lineSplit[0];
 			String caddPos = lineSplit[1];
 			String caddPhred = lineSplit[5];
@@ -57,7 +57,7 @@ public class MergeVCFwithCADD
 			vcfLine = scanVcf.nextLine();
 			String[] lineSplit = vcfLine.split("\t", -1);
 
-			// if one of the keys in map equals the chr and pos of vcf, print vcf line to new file and add cadd score
+			// if one of the keys in map equals the chromosome and pos of vcf, print vcf line to new file and add cadd score
 			if (mergedVcfAndCadd.keySet().contains(lineSplit[15] + "_" + lineSplit[16]))
 			{
 				pw.println(vcfLine + "\t" + mergedVcfAndCadd.get(lineSplit[15] + "_" + lineSplit[16]));

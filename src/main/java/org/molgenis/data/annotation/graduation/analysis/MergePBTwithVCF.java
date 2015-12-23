@@ -17,6 +17,7 @@ import java.util.Scanner;
 import org.molgenis.data.Entity;
 import org.molgenis.data.annotation.RepositoryAnnotator;
 import org.molgenis.data.annotation.cmd.CommandLineAnnotatorConfig;
+import org.molgenis.data.annotation.graduation.utils.AnnotatorUtils;
 import org.molgenis.data.vcf.VcfRepository;
 import org.molgenis.data.vcf.utils.VcfUtils;
 import org.molgenis.util.ApplicationContextProvider;
@@ -93,15 +94,8 @@ public class MergePBTwithVCF
 	{
 		PrintWriter pw = new PrintWriter(outputFile, "UTF-8");
 
-		@SuppressWarnings("resource")
-		Iterator<Entity> vcf = new VcfRepository(vcfFile, "vcf").iterator();
-
-		// Combine VCF with ExAC
-		ApplicationContext applicationContext = ApplicationContextProvider.getApplicationContext();
-		Map<String, RepositoryAnnotator> annotators = applicationContext.getBeansOfType(RepositoryAnnotator.class);
-		RepositoryAnnotator exacAnnotator = annotators.get("exac");
-		exacAnnotator.getCmdLineAnnotatorSettingsConfigurer().addSettings(exacFile.getAbsolutePath());
-		Iterator<Entity> vcfWithExac = exacAnnotator.annotate(vcf);
+		VcfRepository vcfRepository = new VcfRepository(vcfFile, "vcf");
+		Iterator<Entity> vcfWithExac = AnnotatorUtils.annotateWithExac(vcfRepository);
 
 		// Print header one time
 		pw.println("GENE_SYMBOL" + "\t" + "EFFECT" + "\t" + "IMPACT" + "\t" + "MOTHER_GT" + "\t" + "FATHER_GT" + "\t"
@@ -154,9 +148,9 @@ public class MergePBTwithVCF
 		// no rounding
 		DecimalFormat df = new DecimalFormat("#.##############################");
 
-		String chr = record.getString("#CHROM");
+		String chromosome = record.getString("#CHROM");
 		String pos = record.getString("POS");
-		String key = chr + "_" + pos;
+		String key = chromosome + "_" + pos;
 
 		// if HashMap (from PBT) contains chr_pos (from VCF)
 		// for every entry (famID, samID) in HashMap values, get associated VCF data (without genotypes)

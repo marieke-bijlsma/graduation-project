@@ -19,7 +19,7 @@ public class Candidate
 	private InheritanceMode inheritanceMode;
 
 	// select only the variants that apply to this particular candidate
-	private String chrom;
+	private String chromosome;
 	private String pos;
 	private String altAlleles;
 	private String affectedAllele;
@@ -51,7 +51,7 @@ public class Candidate
 	@Override
 	public String toString()
 	{
-		return "Inheritance mode: " + inheritanceMode + "\n" + "Chromosome and position: " + chrom + ":" + pos + "\n"
+		return "Inheritance mode: " + inheritanceMode + "\n" + "Chromosome and position: " + chromosome + ":" + pos + "\n"
 				+ "Alt allele(s): " + altAlleles + "\n" + "Affected allele: " + affectedAllele + "\n"
 				+ "Child, father, mother genotypes: " + childGenotype + ", " + fatherGenotype + ", " + motherGenotype
 				+ "\n" + "Impact: " + impact + " (" + effect + ", " + cDNA + ") " + "\n" + "ExAC AF: " + exac_af_STR
@@ -59,9 +59,9 @@ public class Candidate
 				+ "\n" + "1000G: " + thousandG_af_STR + "\n" + "CADD: " + cadd + "\n";
 	}
 
-	public void setChrom(String chrom)
+	public void setChrom(String chromosome)
 	{
-		this.chrom = chrom;
+		this.chromosome = chromosome;
 	}
 
 	public void setInheritanceMode(InheritanceMode inheritanceMode)
