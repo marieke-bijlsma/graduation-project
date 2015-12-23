@@ -1,4 +1,4 @@
-package org.molgenis.data.annotation.graduation.project;
+package org.molgenis.data.annotation.graduation.analysis;
 
 import java.io.File;
 import java.io.IOException;
@@ -9,20 +9,25 @@ import java.util.Scanner;
 
 /**
  * This class compares the family IDs from both the PED file as the PBT file, to get the right child IDs associated with
- * the family IDs and prints them. They can be used to add as a new column to the PBT file. 
+ * the family IDs and prints them. They can be used to add as a new column to the PBT file.
  * 
  * @author mbijlsma
  */
 public class GetChildSampleIds
 {
+	File pedFile;
+	File pbtFile;
+	
 	/**
 	 * Reads the PED file and adds the family ID and child ID to a new HashMap.
 	 * 
-	 * @param pedFile the PED file to be parsed
+	 * @param pedFile
+	 *            the PED file to be parsed
 	 * @return pedFamilyAndChildId a HashMap containing the family IDs and associated child IDs
-	 * @throws IOException when the input file is not correct
+	 * @throws IOException
+	 *             when the input file is not correct
 	 */
-	public HashMap<String, String> readPed(File pedFile) throws IOException
+	public HashMap<String, String> readPed() throws IOException
 	{
 		HashMap<String, String> pedFamilyAndChildIds = new HashMap<String, String>();
 
@@ -41,11 +46,13 @@ public class GetChildSampleIds
 	/**
 	 * Reads the PBT file and adds the family ID to a new list.
 	 * 
-	 * @param pbtFile the PBT file to be parsed
+	 * @param pbtFile
+	 *            the PBT file to be parsed
 	 * @return pbtFamilyId a list containing the family IDs
-	 * @throws IOException when input file is not correct
+	 * @throws IOException
+	 *             when input file is not correct
 	 */
-	public ArrayList<String> readPbt(File pbtFile) throws IOException
+	public ArrayList<String> readPbt() throws IOException
 	{
 		ArrayList<String> pbtFamilyIds = new ArrayList<String>();
 
@@ -64,8 +71,10 @@ public class GetChildSampleIds
 	/**
 	 * Merges the right family ID with the right child ID and prints both separately.
 	 * 
-	 * @param pedFamilyAndChildIds a HashMap containing family and child IDs
-	 * @param pbtFamilyIds an ArrayList containing family IDs
+	 * @param pedFamilyAndChildIds
+	 *            a HashMap containing family and child IDs
+	 * @param pbtFamilyIds
+	 *            an ArrayList containing family IDs
 	 */
 	public void mergeChildAndFamilyId(HashMap<String, String> pedFamilyAndChildIds, ArrayList<String> pbtFamilyIds)
 	{
@@ -100,16 +109,27 @@ public class GetChildSampleIds
 	/**
 	 * The main method, invokes readPed(), readPbt(), and mergeChildAndFamilyId().
 	 * 
-	 * @param args the command line arguments
-	 * @throws Exception when length of arguments is not 2 or when PED or PBT file does not exists.
+	 * @param args
+	 *            the command line arguments
+	 * @throws Exception
+	 *             when length of arguments is not 2 or when PED or PBT file does not exists.
 	 */
 	public static void main(String[] args) throws Exception
+	{
+		GetChildSampleIds getChildSampleIds = new GetChildSampleIds();
+		getChildSampleIds.parseCommandLineArgs(args);
+		HashMap<String, String> pedFamilyAndChildIds = getChildSampleIds.readPed();
+		ArrayList<String> pbtFamilyIds = getChildSampleIds.readPbt();
+		getChildSampleIds.mergeChildAndFamilyId(pedFamilyAndChildIds, pbtFamilyIds);
+	}
+
+	public void parseCommandLineArgs(String[] args) throws Exception
 	{
 		if (!(args.length == 2))
 		{
 			throw new Exception("Must supply 2 arguments");
 		}
-		
+
 		File pedFile = new File(args[0]);
 		if (!pedFile.isFile())
 		{
@@ -121,10 +141,5 @@ public class GetChildSampleIds
 		{
 			throw new Exception("PBT file does not exist or is not a directory: " + pbtFile.getAbsolutePath());
 		}
-
-		GetChildSampleIds getIds = new GetChildSampleIds();
-		HashMap<String, String> pedFamilyAndChildIds = getIds.readPed(pedFile);
-		ArrayList<String> pbtFamilyIds = getIds.readPbt(pbtFile);
-		getIds.mergeChildAndFamilyId(pedFamilyAndChildIds, pbtFamilyIds);
 	}
 }

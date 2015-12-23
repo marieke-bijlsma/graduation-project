@@ -1,15 +1,16 @@
-package org.molgenis.data.annotation.graduation.project;
+package org.molgenis.data.annotation.graduation.analysis;
 
 import static com.google.common.collect.Sets.newHashSet;
 import static org.elasticsearch.common.collect.Lists.newArrayList;
 import static org.elasticsearch.common.collect.Maps.newHashMap;
-import static org.molgenis.data.annotation.graduation.project.GenotypeUtils.compoundHeterozygousAnalysisFather;
-import static org.molgenis.data.annotation.graduation.project.GenotypeUtils.compoundHeterozygousAnalysisMother;
-import static org.molgenis.data.annotation.graduation.project.GenotypeUtils.heterozygousDenovoAnalysis;
-import static org.molgenis.data.annotation.graduation.project.GenotypeUtils.homozygousAnalysis;
-import static org.molgenis.data.annotation.graduation.project.GenotypeUtils.homozygousDenovoAnalysis;
-import static org.molgenis.data.annotation.graduation.project.GenotypeUtils.isDepthCorrect;
-import static org.molgenis.data.annotation.graduation.project.GenotypeUtils.isGenotypeCorrect;
+import static org.molgenis.data.annotation.graduation.utils.GenotypeUtils.compoundHeterozygousAnalysisFather;
+import static org.molgenis.data.annotation.graduation.utils.GenotypeUtils.compoundHeterozygousAnalysisMother;
+import static org.molgenis.data.annotation.graduation.utils.GenotypeUtils.heterozygousDenovoAnalysis;
+import static org.molgenis.data.annotation.graduation.utils.GenotypeUtils.homozygousAnalysis;
+import static org.molgenis.data.annotation.graduation.utils.GenotypeUtils.homozygousDenovoAnalysis;
+import static org.molgenis.data.annotation.graduation.utils.GenotypeUtils.isDepthCorrect;
+import static org.molgenis.data.annotation.graduation.utils.GenotypeUtils.isGenotypeCorrect;
+import static org.molgenis.data.annotation.graduation.utils.GenotypeUtils.updateHomozygousAndHeterozygousValues;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -25,7 +26,9 @@ import java.util.Set;
 import org.molgenis.data.Entity;
 import org.molgenis.data.annotation.cmd.CommandLineAnnotatorConfig;
 import org.molgenis.data.annotation.entity.impl.SnpEffAnnotator.Impact;
-import org.molgenis.data.annotation.graduation.project.Candidate.InheritanceMode;
+import org.molgenis.data.annotation.graduation.model.Candidate;
+import org.molgenis.data.annotation.graduation.model.Trio;
+import org.molgenis.data.annotation.graduation.model.Candidate.InheritanceMode;
 import org.molgenis.data.vcf.VcfRepository;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.stereotype.Component;
@@ -38,6 +41,8 @@ public class InheritedAnalysis
 	private File candidateOutputFile;
 	private File matrixOutputFile;
 
+	boolean printIds = false; // used in analyzeGene
+	
 	public List<Trio> readPedFile() throws IOException
 	{
 		Scanner scanner = new Scanner(familyAndChildSamplesFile);
@@ -238,7 +243,7 @@ public class InheritedAnalysis
 					// because alt index = 0 for the first alt add 1
 					int altIndex = i + 1;
 
-					GenotypeUtils.updateHomozygousAndHeterozygousValues(altIndex);
+					updateHomozygousAndHeterozygousValues(altIndex);
 
 					if (homozygousAnalysis(childGenotype, fatherGenotype, motherGenotype))
 					{
@@ -388,7 +393,7 @@ public class InheritedAnalysis
 		// impacts can be added to Candidate object (cDNA/impact/effect/CADD/ExAC/1000G/GoNL)
 		for (Candidate candidate : candidates)
 		{
-			bufferedWriter.append(candidate + "\n");
+			bufferedWriter.append("\n" + candidate + "\n");
 		}
 
 		bufferedWriter.close();
@@ -396,7 +401,7 @@ public class InheritedAnalysis
 
 	private void printMatrix(Map<String, List<String>> geneFamilyCandidateCounts) throws IOException
 	{
-		boolean printIds = false; // used in analyzeGene
+		
 		FileWriter fileWriter = new FileWriter(matrixOutputFile, true);
 		BufferedWriter bufferedWriter = new BufferedWriter(fileWriter);
 
@@ -427,7 +432,7 @@ public class InheritedAnalysis
 
 			// remove brackets and commas
 			String countsAsString = counts.toString().replaceAll("^\\[", "").replaceAll("\\]$", "").replace(",", "");
-			bufferedWriter.append(geneSymbol + "\t" + countsAsString);
+			bufferedWriter.append("\n" + geneSymbol + "\t" + countsAsString);
 		}
 		bufferedWriter.close();
 	}

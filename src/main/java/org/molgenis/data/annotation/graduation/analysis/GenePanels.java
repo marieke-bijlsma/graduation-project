@@ -1,4 +1,4 @@
-package org.molgenis.data.annotation.graduation.project;
+package org.molgenis.data.annotation.graduation.analysis;
 
 import java.util.Arrays;
 import java.util.List;

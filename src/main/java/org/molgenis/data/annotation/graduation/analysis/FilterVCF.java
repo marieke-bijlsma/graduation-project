@@ -1,4 +1,4 @@
-package org.molgenis.data.annotation.graduation.project;
+package org.molgenis.data.annotation.graduation.analysis;
 
 import java.io.File;
 import java.io.PrintWriter;
@@ -19,17 +19,17 @@ import org.springframework.stereotype.Component;
 @Component
 public class FilterVCF
 {
+	
+	File vcfFile;
+	File outputFile;
+	
 	/**
 	 * Filters the VCF file according to soe specified thresholds.
 	 * 
-	 * @param vcfFile
-	 *            the file to be filtered
-	 * @param outputFile
-	 *            the file the output must be written to
 	 * @throws Exception
 	 *             when printwriter or itarator cannot perfom correctly
 	 */
-	public void filterVCF(File vcfFile, File outputFile) throws Exception
+	public void readAndFilterVcf() throws Exception
 	{
 		@SuppressWarnings("resource")
 		PrintWriter pw = new PrintWriter(outputFile, "UTF-8");
@@ -159,8 +159,9 @@ public class FilterVCF
 	{
 		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext("org.molgenis.data.annotation");
 		ctx.register(CommandLineAnnotatorConfig.class);
-		FilterVCF main = ctx.getBean(FilterVCF.class);
-		main.run(args);
+		FilterVCF filterVCF = ctx.getBean(FilterVCF.class);
+		filterVCF.parseCommandLineArgs(args);
+		filterVCF.readAndFilterVcf();
 		ctx.close();
 	}
 
@@ -172,7 +173,7 @@ public class FilterVCF
 	 * @throws Exception
 	 *             when file does not exists or length of arguments is incorrect
 	 */
-	public void run(String[] args) throws Exception
+	public void parseCommandLineArgs(String[] args) throws Exception
 	{
 		if (!(args.length == 2))
 		{
@@ -189,9 +190,6 @@ public class FilterVCF
 		if (!outputFile.isFile())
 		{
 			throw new Exception("Output file does not exist or directory: " + outputFile.getAbsolutePath());
-		}
-
-		FilterVCF fv = new FilterVCF();
-		fv.filterVCF(vcfFile, outputFile);
+		}		
 	}
 }

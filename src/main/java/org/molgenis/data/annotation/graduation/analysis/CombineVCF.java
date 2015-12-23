@@ -1,4 +1,4 @@
-package org.molgenis.data.annotation.graduation.project;
+package org.molgenis.data.annotation.graduation.analysis;
 
 import java.io.File;
 import java.io.PrintWriter;
@@ -24,6 +24,10 @@ import org.springframework.stereotype.Component;
 @Component
 public class CombineVCF
 {
+	File vcfFile;
+	File dataFile;
+	File outputFile;
+	
 	/**
 	 * Reads a VCF file and the associated data file, parses it, and writes it to a new file.
 	 * 
@@ -36,7 +40,7 @@ public class CombineVCF
 	 * @throws Exception
 	 *             when output file is not correct
 	 */
-	public void go(File vcfFile, File dataFile, File outputFile) throws Exception
+	public void go() throws Exception
 	{
 		@SuppressWarnings("resource")
 		PrintWriter pw = new PrintWriter(outputFile, "UTF-8");
@@ -81,19 +85,21 @@ public class CombineVCF
 	}
 
 	/**
-	 * The main method, invokes run().
+	 * The main method.
 	 * 
 	 * @param args
 	 *            the command line arguments
 	 * @throws Exception
-	 *             when bean can't be created
+	 *             when bean can't be created or file does not exists
 	 */
 	public static void main(String[] args) throws Exception
 	{
 		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext("org.molgenis.data.annotation");
 		ctx.register(CommandLineAnnotatorConfig.class);
 		CombineVCF main = ctx.getBean(CombineVCF.class);
-		main.run(args);
+		main.parseCommandLineArgs(args);
+		CombineVCF combineVCF = new CombineVCF();
+		combineVCF.go();
 		ctx.close();
 	}
 
@@ -105,7 +111,7 @@ public class CombineVCF
 	 * @throws Exception
 	 *             when the length of the arguments is not 3, or if the VCF or data file does not exists.
 	 */
-	public void run(String[] args) throws Exception
+	public void parseCommandLineArgs(String[] args) throws Exception
 	{
 		if (!(args.length == 3))
 		{
@@ -129,8 +135,5 @@ public class CombineVCF
 		{
 			throw new Exception("Output file does not exist or is not a directory: " + outputFile.getAbsolutePath());
 		}
-
-		CombineVCF cv = new CombineVCF();
-		cv.go(vcfFile, dataFile, outputFile);
 	}
 }

@@ -1,4 +1,6 @@
-package org.molgenis.data.annotation.graduation.project;
+package org.molgenis.data.annotation.graduation.analysis;
+
+import static org.elasticsearch.common.collect.Lists.newArrayList;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -20,7 +22,7 @@ public class GetGeneSymbolColumn
 	 */
 	private ArrayList<String> readFile() throws FileNotFoundException
 	{
-		ArrayList<String> record = new ArrayList<String>();
+		ArrayList<String> record = newArrayList();
 		Scanner s = new Scanner(
 				new File(
 						"/Users/molgenis/Documents/graduation_project/output_mergePBTwithVCF/output_mergePBTwithVCF_mendViolSampleFamily_noGenotypes_copy.txt"));

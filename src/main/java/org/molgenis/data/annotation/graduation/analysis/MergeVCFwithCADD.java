@@ -1,4 +1,4 @@
-package org.molgenis.data.annotation.graduation.project;
+package org.molgenis.data.annotation.graduation.analysis;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -10,38 +10,15 @@ import java.util.Scanner;
 
 public class MergeVCFwithCADD
 {
-
-	public static void main(String[] args) throws Exception
-	{
-
-		File vcfFile = new File(args[0]);
-		if (!vcfFile.isFile())
-		{
-			throw new Exception("Input VCF file does not exist or directory: " + vcfFile.getAbsolutePath());
-		}
-
-		File caddFile = new File(args[1]);
-		if (!caddFile.isFile())
-		{
-			throw new Exception("Input CADD file does not exist or directory: " + caddFile.getAbsolutePath());
-		}
-
-		File output_mergeVCFwithCADD = new File(args[2]);
-		if (!output_mergeVCFwithCADD.isFile())
-		{
-			throw new Exception("Output file does not exist or directory: " + output_mergeVCFwithCADD.getAbsolutePath());
-		}
-
-		MergeVCFwithCADD mvc = new MergeVCFwithCADD();
-		mvc.run(vcfFile, caddFile, output_mergeVCFwithCADD);
-
-	}
-
+	File vcfFile;
+	File caddFile;
+	File outputFile;
+	
 	ArrayList<String> VcfChrPos = new ArrayList<String>();
 
 	HashMap<String, String> mergedVcfAndCadd = new HashMap<String, String>();
 
-	public void run(File vcfFile, File caddFile, File outputFile) throws FileNotFoundException,
+	public void run() throws FileNotFoundException,
 			UnsupportedEncodingException
 	{
 		PrintWriter pw = new PrintWriter(outputFile, "UTF-8");
@@ -91,5 +68,32 @@ public class MergeVCFwithCADD
 		pw.flush();
 		pw.close();
 	}
+	
+	public static void main(String[] args) throws Exception
+	{
+		MergeVCFwithCADD mergeVCFwithCADD = new MergeVCFwithCADD();
+		mergeVCFwithCADD.parseCommandLineArgs(args);
+		mergeVCFwithCADD.run();
+	}
+	
+	public void parseCommandLineArgs(String[] args) throws Exception
+	{
+		File vcfFile = new File(args[0]);
+		if (!vcfFile.isFile())
+		{
+			throw new Exception("Input VCF file does not exist or directory: " + vcfFile.getAbsolutePath());
+		}
 
+		File caddFile = new File(args[1]);
+		if (!caddFile.isFile())
+		{
+			throw new Exception("Input CADD file does not exist or directory: " + caddFile.getAbsolutePath());
+		}
+
+		File output_mergeVCFwithCADD = new File(args[2]);
+		if (!output_mergeVCFwithCADD.isFile())
+		{
+			throw new Exception("Output file does not exist or directory: " + output_mergeVCFwithCADD.getAbsolutePath());
+		}
+	}
 }

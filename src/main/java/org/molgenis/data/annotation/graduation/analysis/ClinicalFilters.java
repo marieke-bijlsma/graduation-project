@@ -1,18 +1,17 @@
-package org.molgenis.data.annotation.graduation.project;
+package org.molgenis.data.annotation.graduation.analysis;
+
+import static org.elasticsearch.common.collect.Lists.newArrayList;
+import static org.elasticsearch.common.collect.Maps.newHashMap;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
-import java.util.Set;
 
-import org.elasticsearch.common.collect.Lists;
-import org.elasticsearch.common.collect.Maps;
 import org.molgenis.data.Entity;
 import org.molgenis.data.annotation.RepositoryAnnotator;
 import org.molgenis.data.annotation.cmd.CommandLineAnnotatorConfig;
@@ -25,21 +24,21 @@ import org.springframework.stereotype.Component;
 @Component
 public class ClinicalFilters
 {
+	File vcfFile;
+	File patientGroups;
+	File exacFile;
 
-	HashMap<String, ArrayList<String>> patientgroupToGenes = new HashMap<String, ArrayList<String>>();
-
+	HashMap<String, ArrayList<String>> patientgroupToGenes = newHashMap();
 	private HashMap<String, String> sampleToGroup;
-	private Set<String> groups;
 
 	private String gtcMessage = null;
 
-	public void go(File vcfFile, File patientGroups, File exacFile) throws Exception
+	public void collectGenes() throws Exception
 	{
+		// Candidates, these should NOT overlap!!!
+		// FIXME: this is "hardcoded", could be read from a file
 
-		/**
-		 * Candidates. NOTE: these should NOT overlap!!
-		 */
-		ArrayList<String> avmGenes = new ArrayList<String>(Arrays.asList(new String[]
+		ArrayList<String> avmGenes = newArrayList(Arrays.asList(new String[]
 		{ "NELFB", "PRKAG2", "JPH2", "MFAP4", "RP5-1086D14.6", "TAZ", "PRIM1", "IRX4", "IRAK1", "SNIP1 ", "B3GALT6",
 				"WDR1", "GATA6", "GATA4", "GATA5", "LZTS2", "DDX42", "ZNF777", "CSRP3", "CHST3 ", "TCF19", "ACTA2",
 				"DCHS1", "DTL", "PDS5A", "SLC30A5", "COL3A1", "TNNT2", "MYPN", "ZIC3", "ANKS6", "PGM5", "ALPK3",
@@ -89,40 +88,37 @@ public class ClinicalFilters
 				"ACTN2", "BMP4", "ACTN4", "TAB2", "BBS2", "UNC45A", "ASXL1", "BRAF", "MYOZ2", "MYOZ1", "TAB1",
 				"MAP3K7", "TAK1" }));
 
-		// FIXME: this is "hardcoded", could be read for a file, but for now OK, as long as it matches..
 		this.patientgroupToGenes.put("avm", avmGenes);
+	}
 
-		Set<String> groups = new HashSet<String>();
-
-		HashMap<String, String> sampleToGroup = new HashMap<String, String>();
+	public void readPatientGroups() throws FileNotFoundException
+	{
 		Scanner s = new Scanner(patientGroups);
 		String line = null;
+
 		while (s.hasNextLine())
 		{
 			line = s.nextLine();
 			String[] lineSplit = line.split("\t", -1);
 			sampleToGroup.put(lineSplit[0], lineSplit[1]);
-			groups.add(lineSplit[1]);
 		}
 		s.close();
+	}
 
-		this.sampleToGroup = sampleToGroup;
-		this.groups = groups;
-
+	public void readVcf() throws Exception
+	{
 		VcfRepository vcf = new VcfRepository(vcfFile, "vcf");
 		ApplicationContext applicationContext = ApplicationContextProvider.getApplicationContext();
 		Map<String, RepositoryAnnotator> annotators = applicationContext.getBeansOfType(RepositoryAnnotator.class);
 		RepositoryAnnotator exacAnnotator = annotators.get("exac");
 
 		exacAnnotator.getCmdLineAnnotatorSettingsConfigurer().addSettings(exacFile.getAbsolutePath());
-		// annotate(exacAnnotator, inputVcfFile, outputVCFFile, attrNames);
 
 		Iterator<Entity> it = exacAnnotator.annotate(vcf);
 
 		while (it.hasNext())
 		{
 			Entity record = it.next();
-
 			String filter = record.getString("FILTER");
 
 			if (!filter.equals("PASS"))
@@ -134,6 +130,7 @@ public class ClinicalFilters
 			String pos = record.getString("POS");
 			String ref = record.getString("REF");
 			String altStr = record.getString("ALT");
+			
 			String exac_af_STR = record.get("EXAC_AF") == null ? null : record.get("EXAC_AF").toString();
 			String exac_ac_hom_STR = record.get("EXAC_AC_HOM") == null ? null : record.get("EXAC_AC_HOM").toString();
 			String exac_ac_het_STR = record.get("EXAC_AC_HET") == null ? null : record.get("EXAC_AC_HET").toString();
@@ -247,7 +244,7 @@ public class ClinicalFilters
 				// System.out.println(candidateGeneGroup + " candidate: " + variantInfo);
 				System.out.println(variantInfo);
 			}
-			
+
 		}
 	}
 
@@ -340,26 +337,25 @@ public class ClinicalFilters
 						+ record.getString("#CHROM") + ":" + record.getString("POS")
 						+ " because it's not a ref-alt combination!");
 			}
-
 		}
 
 		return gtc;
-
 	}
 
 	public static void main(String[] args) throws Exception
 	{
-		// configureLogging();
-
 		// See http://stackoverflow.com/questions/4787719/spring-console-application-configured-using-annotations
 		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext("org.molgenis.data.annotation");
 		ctx.register(CommandLineAnnotatorConfig.class);
-		ClinicalFilters main = ctx.getBean(ClinicalFilters.class);
-		main.run(args);
+		ClinicalFilters clinicalFilters = ctx.getBean(ClinicalFilters.class);
+		clinicalFilters.parseCommandLineArgs(args);
+		clinicalFilters.collectGenes();
+		clinicalFilters.readPatientGroups();
+		clinicalFilters.readVcf();
 		ctx.close();
 	}
 
-	public void run(String[] args) throws Exception
+	public void parseCommandLineArgs(String[] args) throws Exception
 	{
 		if (!(args.length == 3))
 		{
@@ -369,24 +365,19 @@ public class ClinicalFilters
 		File vcfFile = new File(args[0]);
 		if (!vcfFile.isFile())
 		{
-			throw new Exception("Input VCF file does not exist or directory: " + vcfFile.getAbsolutePath());
+			throw new Exception("Input VCF file does not exist or is not a directory: " + vcfFile.getAbsolutePath());
 		}
 
 		File patientGroups = new File(args[1]);
 		if (!patientGroups.isFile())
 		{
-			throw new Exception("Patient groups file does not exist or directory: " + patientGroups.getAbsolutePath());
+			throw new Exception("Patient groups file does not exist or is not a directory: " + patientGroups.getAbsolutePath());
 		}
 
 		File exacFile = new File(args[2]);
 		if (!exacFile.isFile())
 		{
-			throw new Exception("Exac file does not exists at " + exacFile);
+			throw new Exception("Exac file does not exists or is not a directory: " + exacFile);
 		}
-
-		ClinicalFilters cf = new ClinicalFilters();
-		cf.go(vcfFile, patientGroups, exacFile);
-
 	}
-
 }

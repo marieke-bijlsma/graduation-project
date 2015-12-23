@@ -1,4 +1,4 @@
-package org.molgenis.data.annotation.graduation.project;
+package org.molgenis.data.annotation.graduation.model;
 
 import org.molgenis.data.annotation.entity.impl.SnpEffAnnotator.Impact;
 

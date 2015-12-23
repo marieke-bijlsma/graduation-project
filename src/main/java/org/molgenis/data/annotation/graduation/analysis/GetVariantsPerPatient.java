@@ -1,4 +1,4 @@
-package org.molgenis.data.annotation.graduation.project;
+package org.molgenis.data.annotation.graduation.analysis;
 
 import java.io.File;
 import java.util.List;
@@ -18,13 +18,14 @@ import org.elasticsearch.common.collect.Maps;
  */
 public class GetVariantsPerPatient
 {
+	File vcfFile;
 	/**
 	 * Parses a VCF file and saves relevant information in HashMaps.
 	 * 
 	 * @param vcfFile the file to be parsed
 	 * @throws Exception if file does not exists or cannot be parsed
 	 */
-	public void readVCF(File vcfFile) throws Exception
+	public void readVCF() throws Exception
 	{
 		Map<String, Integer> variantCountsPerPatient = Maps.newHashMap();
 		Map<String, List<String>> impactsPerPatient = Maps.newHashMap();
@@ -174,24 +175,25 @@ public class GetVariantsPerPatient
 	}
 
 	/**
-	 * The main method. Invokes run().
+	 * The main method.
 	 * 
 	 * @param args the command line arguments
 	 * @throws Exception when arguments are not correct
 	 */
 	public static void main(String[] args) throws Exception
 	{
-		GetVariantsPerPatient vp = new GetVariantsPerPatient();
-		vp.run(args);
+		GetVariantsPerPatient getVariantsPerPatient = new GetVariantsPerPatient();
+		getVariantsPerPatient.parseCommandLineArgs(args);
+		getVariantsPerPatient.readVCF();
 	}
 
 	/**
 	 * Parses the command line arguments.
 	 * 
 	 * @param args the command line arguments
-	 * @throws Exception when file does not exists or length is not right
+	 * @throws Exception when file does not exists or length of arguments is not right
 	 */
-	public void run(String[] args) throws Exception
+	public void parseCommandLineArgs(String[] args) throws Exception
 	{
 		if (!(args.length == 1))
 		{
@@ -203,9 +205,5 @@ public class GetVariantsPerPatient
 		{
 			throw new Exception("Input VCF file does not exist or is not a directory: " + vcfFile.getAbsolutePath());
 		}
-
-		GetVariantsPerPatient getVariants = new GetVariantsPerPatient();
-		getVariants.readVCF(vcfFile);
 	}
-
 }

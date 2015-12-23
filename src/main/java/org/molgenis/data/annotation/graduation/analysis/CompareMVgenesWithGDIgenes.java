@@ -1,4 +1,4 @@
-package org.molgenis.data.annotation.graduation.project;
+package org.molgenis.data.annotation.graduation.analysis;
 
 import java.io.File;
 import java.io.IOException;
@@ -15,6 +15,9 @@ import org.elasticsearch.common.collect.Lists;
  */
 public class CompareMVgenesWithGDIgenes
 {
+	File mvFile;
+	File gdiFile;
+	
 	/**
 	 * Reads the Mendelian violation file and adds the gene column to a new ArrayList.
 	 * 
@@ -24,7 +27,7 @@ public class CompareMVgenesWithGDIgenes
 	 * @throws IOException
 	 *             when file is not correct
 	 */
-	public ArrayList<String> readMVfile(File mvFile) throws IOException
+	public ArrayList<String> readMVfile() throws IOException
 	{
 		ArrayList<String> mvGenes = Lists.newArrayList();
 
@@ -51,7 +54,7 @@ public class CompareMVgenesWithGDIgenes
 	 * @throws IOException
 	 *             when file is not correct
 	 */
-	public ArrayList<String> readGDIfile(File gdiFile) throws IOException
+	public ArrayList<String> readGDIfile() throws IOException
 	{
 		ArrayList<String> gdiGenes = Lists.newArrayList();
 
@@ -82,7 +85,6 @@ public class CompareMVgenesWithGDIgenes
 
 		for (String geneSymbol : mvGenes)
 		{
-
 			if (gdiGenes.contains(geneSymbol))
 			{
 				continue;
@@ -93,7 +95,6 @@ public class CompareMVgenesWithGDIgenes
 				count++;
 			}
 		}
-
 		System.out.println(count);
 	}
 
@@ -101,10 +102,25 @@ public class CompareMVgenesWithGDIgenes
 	 * The main method, invokes readMVfile(), readGDIfile() and compare().
 	 * 
 	 * @param args the command line arguments
-	 * @throws Exception
-	 *             when the length of the arguments is not 2, or if one of the 2 files does not exists.
+	 * @throws Exception when file does not exists
+	 *            
 	 */
 	public static void main(String[] args) throws Exception
+	{
+		CompareMVgenesWithGDIgenes compareGenes = new CompareMVgenesWithGDIgenes();
+		compareGenes.parseCommandLineArgs(args);
+		ArrayList<String> mvGenes = compareGenes.readMVfile();
+		ArrayList<String> gdiGenes = compareGenes.readGDIfile();
+		compareGenes.compare(mvGenes, gdiGenes);
+	}
+	
+	/**
+	 * Parse command line arguments.
+	 * 
+	 * @param args the command line arguments
+	 * @throws Exception when file does not exist or when length of arguments is incorrect
+	 */
+	public void parseCommandLineArgs(String[] args) throws Exception
 	{
 		if (!(args.length == 2))
 		{
@@ -122,10 +138,5 @@ public class CompareMVgenesWithGDIgenes
 		{
 			throw new Exception("Input GDI file does not exist or is not a directory: " + gdiFile.getAbsolutePath());
 		}
-
-		CompareMVgenesWithGDIgenes compareGenes = new CompareMVgenesWithGDIgenes();
-		ArrayList<String> mvGenes = compareGenes.readMVfile(mvFile);
-		ArrayList<String> gdiGenes = compareGenes.readGDIfile(gdiFile);
-		compareGenes.compare(mvGenes, gdiGenes);
 	}
 }

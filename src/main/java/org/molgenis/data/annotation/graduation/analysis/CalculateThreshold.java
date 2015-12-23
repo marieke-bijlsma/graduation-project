@@ -1,4 +1,4 @@
-package org.molgenis.data.annotation.graduation.project;
+package org.molgenis.data.annotation.graduation.analysis;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -89,7 +89,6 @@ public class CalculateThreshold
 				}
 				total++;
 			}
-
 			System.out.println("for tp = " + tp + " we find " + total + " of which " + pairs + " pairs (perc TP:"
 					+ ((double) pairs) / (double) total * 100.0 + ")");
 		}

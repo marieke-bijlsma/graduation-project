@@ -1,4 +1,6 @@
-package org.molgenis.data.annotation.graduation.project;
+package org.molgenis.data.annotation.graduation.analysis;
+
+import static org.elasticsearch.common.collect.Maps.newHashMap;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -7,7 +9,6 @@ import java.io.UnsupportedEncodingException;
 import java.util.Map;
 import java.util.Scanner;
 
-import org.elasticsearch.common.collect.Maps;
 
 /**
  * This class creates a new Mendelian Violation file by analyzing the X chromosome of boys. It prints the result to a
@@ -17,6 +18,10 @@ import org.elasticsearch.common.collect.Maps;
  */
 public class CreateNewMendelianViolationsForX
 {
+	File pedFile;
+	File mvFile;
+	File outputFile;
+	
 	/**
 	 * Parses the PED file.
 	 * 
@@ -26,9 +31,9 @@ public class CreateNewMendelianViolationsForX
 	 * @throws FileNotFoundException
 	 *             when file does not exists
 	 */
-	public Map<String, String> readPedFile(File pedFile) throws FileNotFoundException
+	public Map<String, String> readPedFile() throws FileNotFoundException
 	{
-		Map<String, String> pedFamilyAndSex = Maps.newHashMap();
+		Map<String, String> pedFamilyAndSex = newHashMap();
 		Scanner s = new Scanner(pedFile);
 		String pedLine = null;
 
@@ -56,7 +61,7 @@ public class CreateNewMendelianViolationsForX
 	 * @throws UnsupportedEncodingException
 	 *             when output file is not encoded correctly
 	 */
-	public void readMvFile(File mvFile, File outputFile, Map<String, String> pedFamilyAndSex)
+	public void readMvFile(Map<String, String> pedFamilyAndSex)
 			throws FileNotFoundException, UnsupportedEncodingException
 	{
 
@@ -197,9 +202,10 @@ public class CreateNewMendelianViolationsForX
 	 */
 	public static void main(String[] args) throws Exception
 	{
-		CreateNewMendelianViolationsForX cmv = new CreateNewMendelianViolationsForX();
-		cmv.run(args);
-
+		CreateNewMendelianViolationsForX createNewMendelianViolationsForX = new CreateNewMendelianViolationsForX();
+		createNewMendelianViolationsForX.parseCommandLineArgs(args);
+		Map<String, String> pedFamilyAndSex = createNewMendelianViolationsForX.readPedFile();
+		createNewMendelianViolationsForX.readMvFile(pedFamilyAndSex);
 	}
 
 	/**
@@ -210,7 +216,7 @@ public class CreateNewMendelianViolationsForX
 	 * @throws Exception
 	 *             when file does not exist or length of arguments is incorrect
 	 */
-	public void run(String[] args) throws Exception
+	public void parseCommandLineArgs(String[] args) throws Exception
 	{
 		File pedFile = new File(args[0]);
 		if (!pedFile.isFile())
@@ -228,10 +234,5 @@ public class CreateNewMendelianViolationsForX
 		{
 			throw new Exception("Output file does not exist or directory: " + outputFile.getAbsolutePath());
 		}
-
-		CreateNewMendelianViolationsForX cmv = new CreateNewMendelianViolationsForX();
-		Map<String, String> pedFamilyAndSex = cmv.readPedFile(pedFile);
-		cmv.readMvFile(mvFile, outputFile, pedFamilyAndSex);
-
 	}
 }

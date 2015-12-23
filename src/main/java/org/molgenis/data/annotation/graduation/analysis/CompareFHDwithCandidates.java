@@ -1,11 +1,9 @@
-package org.molgenis.data.annotation.graduation.project;
+package org.molgenis.data.annotation.graduation.analysis;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Scanner;
 
 public class CompareFHDwithCandidates
@@ -116,6 +114,12 @@ public class CompareFHDwithCandidates
 	}
 
 	public static void main(String[] args) throws Exception
+	{
+		CompareFHDwithCandidates compareGenes = new CompareFHDwithCandidates();
+		compareGenes.parseCommandLineArgs(args);
+	}
+	
+	public void parseCommandLineArgs(String[] args) throws Exception
 	{
 		if (!(args.length == 3))
 		{

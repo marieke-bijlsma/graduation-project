@@ -1,4 +1,7 @@
-package org.molgenis.data.annotation.graduation.project;
+package org.molgenis.data.annotation.graduation.analysis;
+
+import static org.elasticsearch.common.collect.Lists.newArrayList;
+import static org.elasticsearch.common.collect.Maps.newHashMap;
 
 import java.io.File;
 import java.io.IOException;
@@ -11,7 +14,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 
-import org.elasticsearch.common.collect.Maps;
 import org.molgenis.data.Entity;
 import org.molgenis.data.annotation.RepositoryAnnotator;
 import org.molgenis.data.annotation.cmd.CommandLineAnnotatorConfig;
@@ -31,20 +33,23 @@ import org.springframework.stereotype.Component;
 @Component
 public class MergePBTwithVCF
 {
+	File pbtFile;
+	File vcfFile;
+	File exacFile;
+	File outputFile;
+
 	/**
 	 * Reads the PBT file and adds the information to a new string array, which is added to a HashMap containing the
 	 * associated chromsome and postion as key.
-	 * 
-	 * @param pbtFile
-	 *            the PBT file to be parsed
+	 *
 	 * @return pbtEntries a HashMap containing chromosome and position with associated PBT information
 	 * @throws IOException
 	 *             when input file is not correct
 	 */
-	public HashMap<String, List<String[]>> readPBT(File pbtFile) throws IOException
+	public HashMap<String, List<String[]>> readPBT() throws IOException
 	{
 		// new HashMap with String chr_pos as key and String[] family ID, sampleID as values
-		HashMap<String, List<String[]>> pbtEntries = Maps.newHashMap();
+		HashMap<String, List<String[]>> pbtEntries = newHashMap();
 
 		Scanner s = new Scanner(pbtFile);
 		String line = null;
@@ -67,7 +72,7 @@ public class MergePBTwithVCF
 			}
 			else
 			{
-				List<String[]> entries = new ArrayList<String[]>();
+				List<String[]> entries = newArrayList();
 				entries.add(familySampleGenotypes);
 				pbtEntries.put(key, entries);
 			}
@@ -79,20 +84,19 @@ public class MergePBTwithVCF
 	/**
 	 * Reads the VCF file (annotated with ExAC).
 	 * 
-	 * @param vcfFile the VCF file to be parsed
-	 * @param exacFile the ExAC file to be parsed
-	 * @param output the file the output will be written to
-	 * @param pbtEntries HashMap containing chromosome and position + associated info from PBT file
-	 * @throws IOException when output file or VCF file is not correct
+	 * @param pbtEntries
+	 *            HashMap containing chromosome and position + associated info from PBT file
+	 * @throws IOException
+	 *             when output file or VCF file is not correct
 	 */
-	public void readVCFwithExAC(File vcfFile, File exacFile, File output, Map<String, List<String[]>> pbtEntries) throws IOException
+	public void readVCFwithExAC(Map<String, List<String[]>> pbtEntries) throws IOException
 	{
-		PrintWriter pw = new PrintWriter(output, "UTF-8");
+		PrintWriter pw = new PrintWriter(outputFile, "UTF-8");
 
 		@SuppressWarnings("resource")
 		Iterator<Entity> vcf = new VcfRepository(vcfFile, "vcf").iterator();
 
-		//Combine VCF with ExAC
+		// Combine VCF with ExAC
 		ApplicationContext applicationContext = ApplicationContextProvider.getApplicationContext();
 		Map<String, RepositoryAnnotator> annotators = applicationContext.getBeansOfType(RepositoryAnnotator.class);
 		RepositoryAnnotator exacAnnotator = annotators.get("exac");
@@ -130,18 +134,22 @@ public class MergePBTwithVCF
 	/**
 	 * Combines the VCF (with ExAC) file with the PBT file.
 	 * 
-	 * @param record Entity containing a line from the VCF file
-	 * @param pbtEntries HashMap containing chromosome and position + associated info from PBT file
-	 * @param pw PrintWriter to write output to file
-	 * @throws Exception when multi-allelic varaint is found
+	 * @param record
+	 *            Entity containing a line from the VCF file
+	 * @param pbtEntries
+	 *            HashMap containing chromosome and position + associated info from PBT file
+	 * @param pw
+	 *            PrintWriter to write output to file
+	 * @throws Exception
+	 *             when multi-allelic varaint is found
 	 */
 	public void combineVCFwithPBT(Entity record, Map<String, List<String[]>> pbtEntries, PrintWriter pw)
 			throws Exception
 	{
-		ArrayList<String> variantsWithHighImpact = new ArrayList<String>();
-		ArrayList<String> variantsWithModerateImpact = new ArrayList<String>();
-		ArrayList<String> variantsWithLowImpact = new ArrayList<String>();
-		ArrayList<String> variantsWithModifierImpact = new ArrayList<String>();
+		ArrayList<String> variantsWithHighImpact = newArrayList();
+		ArrayList<String> variantsWithModerateImpact = newArrayList();
+		ArrayList<String> variantsWithLowImpact = newArrayList();
+		ArrayList<String> variantsWithModifierImpact = newArrayList();
 
 		// no rounding
 		DecimalFormat df = new DecimalFormat("#.##############################");
@@ -172,7 +180,7 @@ public class MergePBTwithVCF
 			String gene = GetGeneSymbolColumn.getColFromInfoField(annField, 3);
 			String effect = GetGeneSymbolColumn.getColFromInfoField(annField, 1);
 			String impact = GetGeneSymbolColumn.getColFromInfoField(annField, 2);
-			
+
 			for (String[] entries : pbtEntries.get(key))
 			{
 				String vcfEntry = VcfUtils.convertToVCF(record, false); // no genotypes
@@ -215,11 +223,16 @@ public class MergePBTwithVCF
 	/**
 	 * Writes impact to output file, sorted from high to modifier.
 	 * 
-	 * @param variantsWithHighImpact a list containing variants with a high impact
-	 * @param variantsWithModerateImpact a list containing variants with a moderate impact
-	 * @param variantsWithLowImpact a list containing variants with a low impact
-	 * @param variantsWithModifierImpact a list containing variants with a modifier impact
-	 * @param pw PrintWriter to write output to file
+	 * @param variantsWithHighImpact
+	 *            a list containing variants with a high impact
+	 * @param variantsWithModerateImpact
+	 *            a list containing variants with a moderate impact
+	 * @param variantsWithLowImpact
+	 *            a list containing variants with a low impact
+	 * @param variantsWithModifierImpact
+	 *            a list containing variants with a modifier impact
+	 * @param pw
+	 *            PrintWriter to write output to file
 	 */
 	public void printSortedImpact(ArrayList<String> variantsWithHighImpact,
 			ArrayList<String> variantsWithModerateImpact, ArrayList<String> variantsWithLowImpact,
@@ -252,17 +265,19 @@ public class MergePBTwithVCF
 		pw.close();
 	}
 
-/**
- * Returns yes or no according to multiple genes that are found for one variant.
- * 
- * @param gene String holding the specific gene
- * @param panel List with genes from gene panels
- * @return res the resulting stringbuffer
- */
+	/**
+	 * Returns yes or no according to multiple genes that are found for one variant.
+	 * 
+	 * @param gene
+	 *            String holding the specific gene
+	 * @param panel
+	 *            List with genes from gene panels
+	 * @return res the resulting stringbuffer
+	 */
 	private String containsMultiGene(String gene, List<String> panel)
 	{
 		// gene can be comma separated, e.g. "MLH1, MSH2" (2 genes on different strand)
-		
+
 		StringBuffer res = new StringBuffer();
 		String[] multiGene = gene.split(", ", -1);
 		for (String oneGene : multiGene)
@@ -281,29 +296,34 @@ public class MergePBTwithVCF
 	}
 
 	/**
-	 * The main method, invokes run().
+	 * The main method.
 	 * 
-	 * @param args the command line arguments
+	 * @param args
+	 *            the command line arguments
 	 * @throws Exception
+	 *             when files do not exist
 	 */
 	public static void main(String[] args) throws Exception
 	{
 		// See http://stackoverflow.com/questions/4787719/spring-console-application-configured-using-annotations
 		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext("org.molgenis.data.annotation");
 		ctx.register(CommandLineAnnotatorConfig.class);
-		MergePBTwithVCF main = ctx.getBean(MergePBTwithVCF.class);
-		main.run(args);
+		MergePBTwithVCF mergePBTwithVCF = ctx.getBean(MergePBTwithVCF.class);
+		mergePBTwithVCF.parseCommandLineArgs(args);
+		Map<String, List<String[]>> pbtEntries = mergePBTwithVCF.readPBT();
+		mergePBTwithVCF.readVCFwithExAC(pbtEntries);
 		ctx.close();
 	}
 
 	/**
 	 * Parses command line arguments.
-	 * Invokes readPBT() and readVCFwithExAC().
 	 * 
-	 * @param args the command line args
-	 * @throws Exception when the length of the arguments is not 4, or if one of the  files does not exists.
+	 * @param args
+	 *            the command line arguments
+	 * @throws Exception
+	 *             when the length of the arguments is not 4, or if one of the files does not exists.
 	 */
-	public void run(String[] args) throws Exception
+	public void parseCommandLineArgs(String[] args) throws Exception
 	{
 		if (!(args.length == 4))
 		{
@@ -328,16 +348,10 @@ public class MergePBTwithVCF
 			throw new Exception("exac file does not exist or directory: " + exacFile.getAbsolutePath());
 		}
 
-		File output = new File(args[3]);
-		if (output.exists())
+		File outputFile = new File(args[3]);
+		if (outputFile.exists())
 		{
-			System.out.println("WARNING: output file already exists, overwriting " + output);
+			System.out.println("WARNING: output file already exists, overwriting " + outputFile);
 		}
-
-		MergePBTwithVCF mergeFiles = new MergePBTwithVCF();
-		Map<String, List<String[]>> pbtEntries = mergeFiles.readPBT(pbtFile);
-		mergeFiles.readVCFwithExAC(vcfFile, exacFile, output, pbtEntries);
-
 	}
-
 }
