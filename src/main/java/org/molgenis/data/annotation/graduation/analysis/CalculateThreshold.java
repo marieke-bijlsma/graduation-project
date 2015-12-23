@@ -1,11 +1,14 @@
 package org.molgenis.data.annotation.graduation.analysis;
 
+import static org.elasticsearch.common.collect.Lists.newArrayList;
+import static org.elasticsearch.common.collect.Maps.newHashMap;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Scanner;
-
-import org.elasticsearch.common.collect.Lists;
 
 /**
  * This class calculates the true positive rate of all replicate trios according to the transmission probability.
@@ -15,87 +18,97 @@ import org.elasticsearch.common.collect.Lists;
 public class CalculateThreshold
 {
 	/**
-	 * Read file and add lines to ArrayList.
+	 * Read file and add lines to {@link List}.
 	 * 
 	 * @throws FileNotFoundException
 	 *             when file not found
-	 * @return record list containing all lines of file
+	 * @return records {@link List} containing all lines of the mendelian violation file
 	 */
-	private static ArrayList<String> readFile() throws FileNotFoundException
+	private ArrayList<String> readFile() throws FileNotFoundException
 	{
-		ArrayList<String> record = Lists.newArrayList();
-		@SuppressWarnings("resource")
-		Scanner s = new Scanner(
-				new File(
-						"/Users/molgenis/Documents/graduation_project/mendelianViolationFiles/mendelian_violation_Xadjusted_replicates.txt"));
+		ArrayList<String> records = newArrayList();
+		String mendelianViolationFile = "/Users/molgenis/Documents/graduation_project/mendelianViolationFiles/mendelian_violation_Xadjusted_replicates.txt";
 
-		s.nextLine(); // skip header
-		while (s.hasNextLine())
+		Scanner scanner = new Scanner(new File(mendelianViolationFile));
+
+		scanner.nextLine(); // skip header
+		while (scanner.hasNextLine())
 		{
-			String line = s.nextLine();
-			record.add(line);
+			String line = scanner.nextLine();
+			records.add(line);
 		}
-
-		return record;
+		scanner.close();
+		return records;
 	}
 
 	/**
 	 * Calculates the true positive rate according to the transmission probability and prints the result.
 	 * 
-	 * @param record
-	 *            list containing all lines of file
+	 * @param records
+	 *            {@link List} containing all lines of file
+	 * @throws FileNotFoundException
+	 *             when file is not found
 	 */
-	private static void calculateTransmissionProbability(ArrayList<String> record)
+	private void calculateTransmissionProbability() throws FileNotFoundException
 	{
+		ArrayList<String> records = readFile();
 
-		for (int tp = 0; tp < 127; tp++) // max is 126
+		// Map to keep track of chromosome - position combinations so we can quickly scan the file for duplicate
+		// genotypes from samples with different family identifiers
+		HashMap<String, List<String>> recordMap = newHashMap();
+
+		int maxMendelianViolationTransmissionProbability = 127;
+
+		for (int transmissionProbability = 0; transmissionProbability < maxMendelianViolationTransmissionProbability; transmissionProbability++)
 		{
 			int total = 0;
 			int pairs = 0;
 
-			for (String line : record)
+			for (String record : records)
 			{
-				String[] split = line.split("\t");
+				String[] split = record.split("\t");
 
-				int variantTP = Integer.parseInt(split[5]);
-
-				if (variantTP < tp)
+				int variantTransmissionProbability = Integer.parseInt(split[5]);
+				if (variantTransmissionProbability >= transmissionProbability)
 				{
-					continue;
+					String chromosomePositionKey = split[0] + "_" + split[1];
+
+					if (recordMap.containsKey(chromosomePositionKey))
+					{
+						List<String> recordInfo = recordMap.get(chromosomePositionKey);
+						String familyID = recordInfo.get(0);
+
+						if (!split[3].equals(familyID))
+						{
+							String motherGt = recordInfo.get(1);
+							String fatherGt = recordInfo.get(2);
+							String childGt = recordInfo.get(3);
+
+							if (split[6].equals(motherGt) && split[10].equals(fatherGt) && split[14].equals(childGt))
+							{
+								pairs++;
+							}
+						}
+					}
+					else
+					{
+						recordMap.put(chromosomePositionKey, newArrayList(split[3], split[6], split[10], split[14]));
+					}
+					total++;
 				}
-
-				for (String replicateLine : record) // go through lines 2 times
-				{
-					String[] replicateSplit = replicateLine.split("\t");
-
-					int replicateVariantTP = Integer.parseInt(replicateSplit[5]);
-
-					if (replicateVariantTP < tp)
-					{
-						continue;
-					}
-
-					if (replicateSplit[3].equals(split[3])) // matches itself
-					{
-						continue;
-					}
-
-					if (replicateSplit[0].equals(split[0]) && replicateSplit[1].equals(split[1])
-							&& replicateSplit[6].equals(split[6]) && replicateSplit[10].equals(split[10])
-							&& replicateSplit[14].equals(split[14])) // if pair
-					{
-						pairs++;
-					}
-				}
-				total++;
 			}
-			System.out.println("for tp = " + tp + " we find " + total + " of which " + pairs + " pairs (perc TP:"
-					+ ((double) pairs) / (double) total * 100.0 + ")");
+
+			// Skip 0 values because dividing 0 by 0 gives NaN values
+			if (total != 0 && pairs != 0)
+			{
+				System.out.println("for tp = " + transmissionProbability + " we find " + total + " of which " + pairs
+						+ " pairs (perc TP:" + ((double) pairs) / (double) total * 100.0 + ")");
+			}
 		}
 	}
 
 	/**
-	 * The main method, invokes readFile() and calculateTransmissionProbability().
+	 * The main method, calculateTransmissionProbability().
 	 * 
 	 * @param args
 	 * @throws FileNotFoundException
@@ -103,7 +116,7 @@ public class CalculateThreshold
 	 */
 	public static void main(String[] args) throws FileNotFoundException
 	{
-		ArrayList<String> record = readFile();
-		calculateTransmissionProbability(record);
+		CalculateThreshold calculateThreshold = new CalculateThreshold();
+		calculateThreshold.calculateTransmissionProbability();
 	}
 }
