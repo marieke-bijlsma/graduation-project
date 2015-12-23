@@ -2,13 +2,11 @@ package org.molgenis.data.annotation.graduation.analysis;
 
 import static org.elasticsearch.common.collect.Lists.newArrayList;
 import static org.elasticsearch.common.collect.Maps.newHashMap;
+import static org.molgenis.data.annotation.graduation.utils.FileReadUtils.readMendelianViolationFile;
 
-import java.io.File;
 import java.io.FileNotFoundException;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Scanner;
 
 /**
  * This class calculates the true positive rate of all replicate trios according to the transmission probability.
@@ -17,30 +15,6 @@ import java.util.Scanner;
  */
 public class CalculateThreshold
 {
-	/**
-	 * Read file and add lines to {@link List}.
-	 * 
-	 * @throws FileNotFoundException
-	 *             when file not found
-	 * @return records {@link List} containing all lines of the mendelian violation file
-	 */
-	private ArrayList<String> readFile() throws FileNotFoundException
-	{
-		ArrayList<String> records = newArrayList();
-		String mendelianViolationFile = "/Users/molgenis/Documents/graduation_project/mendelianViolationFiles/mendelian_violation_Xadjusted_replicates.txt";
-
-		Scanner scanner = new Scanner(new File(mendelianViolationFile));
-
-		scanner.nextLine(); // skip header
-		while (scanner.hasNextLine())
-		{
-			String line = scanner.nextLine();
-			records.add(line);
-		}
-		scanner.close();
-		return records;
-	}
-
 	/**
 	 * Calculates the true positive rate according to the transmission probability and prints the result.
 	 * 
@@ -51,7 +25,7 @@ public class CalculateThreshold
 	 */
 	private void calculateTransmissionProbability() throws FileNotFoundException
 	{
-		ArrayList<String> records = readFile();
+		List<String> records = readMendelianViolationFile();
 
 		// Map to keep track of chromosome - position combinations so we can quickly scan the file for duplicate
 		// genotypes from samples with different family identifiers

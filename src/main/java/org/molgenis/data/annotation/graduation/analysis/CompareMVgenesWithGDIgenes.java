@@ -1,8 +1,13 @@
 package org.molgenis.data.annotation.graduation.analysis;
 
+import static org.elasticsearch.common.collect.Lists.newArrayList;
+import static org.molgenis.data.annotation.graduation.utils.FileReadUtils.readMendelianViolationFile;
+
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Scanner;
 
 import org.elasticsearch.common.collect.Lists;
@@ -17,32 +22,27 @@ public class CompareMVgenesWithGDIgenes
 {
 	File mvFile;
 	File gdiFile;
-	
+
 	/**
 	 * Reads the Mendelian violation file and adds the gene column to a new ArrayList.
 	 * 
 	 * @param mvFile
 	 *            the Mendelian violation file to be parsed
 	 * @return mvGenes a list containing the genes from this file
-	 * @throws IOException
-	 *             when file is not correct
+	 * @throws FileNotFoundException 
+	 * 
 	 */
-	public ArrayList<String> readMVfile() throws IOException
+	public List<String> readMVfile() throws FileNotFoundException
 	{
-		ArrayList<String> mvGenes = Lists.newArrayList();
+		List<String> mendelianViolationGenes = newArrayList();
 
-		Scanner scanMv = new Scanner(mvFile);
-		String mvLine = null;
-		scanMv.nextLine(); // skip header
-
-		while (scanMv.hasNextLine())
+		for (String record : readMendelianViolationFile())
 		{
-			mvLine = scanMv.nextLine();
-			String[] lineSplit = mvLine.split("\t", -1);
-			mvGenes.add(lineSplit[0]); // gene column
+			String[] lineSplit = record.split("\t", -1);
+			mendelianViolationGenes.add(lineSplit[0]); // gene column
 		}
-		scanMv.close();
-		return mvGenes;
+
+		return mendelianViolationGenes;
 	}
 
 	/**
@@ -79,7 +79,7 @@ public class CompareMVgenesWithGDIgenes
 	 * @param gdiGenes
 	 *            a list containing the genes from the gdiFile
 	 */
-	public void compare(ArrayList<String> mvGenes, ArrayList<String> gdiGenes)
+	public void compare(List<String> mvGenes, List<String> gdiGenes)
 	{
 		int count = 0;
 
@@ -101,24 +101,28 @@ public class CompareMVgenesWithGDIgenes
 	/**
 	 * The main method, invokes readMVfile(), readGDIfile() and compare().
 	 * 
-	 * @param args the command line arguments
-	 * @throws Exception when file does not exists
-	 *            
+	 * @param args
+	 *            the command line arguments
+	 * @throws Exception
+	 *             when file does not exists
+	 * 
 	 */
 	public static void main(String[] args) throws Exception
 	{
 		CompareMVgenesWithGDIgenes compareGenes = new CompareMVgenesWithGDIgenes();
 		compareGenes.parseCommandLineArgs(args);
-		ArrayList<String> mvGenes = compareGenes.readMVfile();
+		List<String> mvGenes = compareGenes.readMVfile();
 		ArrayList<String> gdiGenes = compareGenes.readGDIfile();
 		compareGenes.compare(mvGenes, gdiGenes);
 	}
-	
+
 	/**
 	 * Parse command line arguments.
 	 * 
-	 * @param args the command line arguments
-	 * @throws Exception when file does not exist or when length of arguments is incorrect
+	 * @param args
+	 *            the command line arguments
+	 * @throws Exception
+	 *             when file does not exist or when length of arguments is incorrect
 	 */
 	public void parseCommandLineArgs(String[] args) throws Exception
 	{
