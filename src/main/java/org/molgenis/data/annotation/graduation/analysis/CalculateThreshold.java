@@ -2,11 +2,13 @@ package org.molgenis.data.annotation.graduation.analysis;
 
 import static org.elasticsearch.common.collect.Lists.newArrayList;
 import static org.elasticsearch.common.collect.Maps.newHashMap;
-import static org.molgenis.data.annotation.graduation.utils.FileReadUtils.readMendelianViolationFile;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.HashMap;
 import java.util.List;
+
+import org.molgenis.data.annotation.graduation.utils.FileReadUtils;
 
 /**
  * This class calculates the true positive rate of all replicate trios according to the transmission probability.
@@ -15,6 +17,9 @@ import java.util.List;
  */
 public class CalculateThreshold
 {
+	private final File mendelianViolationFileLocation = new File(
+			"/Users/molgenis/Documents/graduation_project/mendelianViolationFiles/mendelian_violation_Xadjusted_replicates.txt");
+
 	/**
 	 * Calculates the true positive rate according to the transmission probability and prints the result.
 	 * 
@@ -25,7 +30,7 @@ public class CalculateThreshold
 	 */
 	private void calculateTransmissionProbability() throws FileNotFoundException
 	{
-		List<String> records = readMendelianViolationFile();
+		List<String> records = FileReadUtils.readFile(mendelianViolationFileLocation, true);
 
 		// Map to keep track of chromosome - position combinations so we can quickly scan the file for duplicate
 		// genotypes from samples with different family identifiers

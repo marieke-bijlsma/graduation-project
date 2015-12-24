@@ -9,14 +9,12 @@ import java.util.Scanner;
 
 /**
  * Class that provides utilities to read files.
+ * 
  * @author mbijlsma
  *
  */
 public class FileReadUtils
 {
-	private static final File mendelianViolationFileLocation = new File(
-			"/Users/molgenis/Documents/graduation_project/mendelianViolationFiles/mendelian_violation_Xadjusted_replicates.txt");
-
 	/**
 	 * Read file and add lines to {@link List}.
 	 * 
@@ -24,13 +22,14 @@ public class FileReadUtils
 	 *             when file not found
 	 * @return records {@link List} containing all lines of the mendelian violation file
 	 */
-	public static List<String> readMendelianViolationFile() throws FileNotFoundException
+	public static List<String> readFile(File file, boolean skipHeader) throws FileNotFoundException
 	{
 		List<String> records = newArrayList();
 
-		Scanner scanner = new Scanner(mendelianViolationFileLocation);
+		Scanner scanner = new Scanner(file);
 		String record = null;
-		scanner.nextLine(); // skip header
+
+		if (skipHeader) scanner.nextLine(); // skip header
 
 		while (scanner.hasNextLine())
 		{
@@ -39,5 +38,28 @@ public class FileReadUtils
 		}
 		scanner.close();
 		return records;
+	}
+	
+	/**
+	 * 
+	 * @param record
+	 * @param index
+	 * @return
+	 */
+	public static String getAnnotationField(String record, int index)
+	{
+		String infoColumn = record.split("\t")[index];
+
+		String infoFields[] = infoColumn.split(";", -1);
+		String annField = null;
+		for (String infoField : infoFields)
+		{
+			if (infoField.startsWith("ANN="))
+			{
+				annField = infoField;
+				break;
+			}
+		}
+		return annField;
 	}
 }

@@ -1,28 +1,29 @@
 package org.molgenis.data.annotation.graduation.analysis;
 
+import static java.lang.Double.parseDouble;
+import static org.molgenis.data.annotation.entity.impl.SnpEffAnnotator.Impact.LOW;
+import static org.molgenis.data.annotation.entity.impl.SnpEffAnnotator.Impact.MODIFIER;
+import static org.molgenis.data.annotation.entity.impl.SnpEffAnnotator.Impact.valueOf;
+import static org.molgenis.data.vcf.utils.VcfUtils.convertToVCF;
+
+import java.io.BufferedWriter;
 import java.io.File;
-import java.io.PrintWriter;
-import java.util.Iterator;
+import java.io.FileWriter;
 
 import org.molgenis.data.Entity;
-import org.molgenis.data.annotation.cmd.CommandLineAnnotatorConfig;
+import org.molgenis.data.annotation.entity.impl.SnpEffAnnotator.Impact;
 import org.molgenis.data.vcf.VcfRepository;
-import org.molgenis.data.vcf.utils.VcfUtils;
-import org.springframework.context.annotation.AnnotationConfigApplicationContext;
-import org.springframework.stereotype.Component;
 
 /**
  * This class filters a VCF file to receive a smaller VCF file which can be analyzed further.
  * 
  * @author mbijlsma
  */
-@Component
 public class FilterVCF
 {
-	
-	File vcfFile;
-	File outputFile;
-	
+	private File vcfFile;
+	private File outputFile;
+
 	/**
 	 * Filters the VCF file according to soe specified thresholds.
 	 * 
@@ -31,19 +32,15 @@ public class FilterVCF
 	 */
 	public void readAndFilterVcf() throws Exception
 	{
-		@SuppressWarnings("resource")
-		PrintWriter pw = new PrintWriter(outputFile, "UTF-8");
-
-		@SuppressWarnings("resource")
-		Iterator<Entity> vcf = new VcfRepository(vcfFile, "vcf").iterator();
+		FileWriter fileWriter = new FileWriter(outputFile, true);
+		BufferedWriter bufferedWriter = new BufferedWriter(fileWriter);
+		VcfRepository vcfRepository = new VcfRepository(vcfFile, "vcf");
 
 		int count = 0;
 
-		// loop through VCF
-		while (vcf.hasNext())
+		for (Entity record : vcfRepository)
 		{
 			count++;
-			Entity record = vcf.next();
 
 			// print number of lines scanned
 			if (count % 1000 == 0)
@@ -52,99 +49,66 @@ public class FilterVCF
 			}
 
 			// get filter column and filter all that are not PASS
-			String filter = record.getString("FILTER");
-
-			if (!(filter.equals("PASS")))
+			if (record.getString(VcfRepository.FILTER).equals("PASS"))
 			{
-				continue;
-			}
+				// if multiple alternate alleles, multiple AFs -> split AFs and analyze all
+				// ExAC is separated with comma, GoNL with pipe and 1000G aslo with comma
 
-			// get alt for iterating over alt alleles and get exac af, gonl af and 1000G af
-			String altStr = record.getString("ALT");
-			String exac_af_STR = record.get("EXAC_AF") == null ? null : record.get("EXAC_AF").toString();
-			String gonl_af_STR = record.get("GoNL_AF") == null ? null : record.get("GoNL_AF").toString();
-			String thousandG_af_STR = record.get("Thousand_Genomes_AF") == null ? null : record.get(
-					"Thousand_Genomes_AF").toString();
+				// get alt for iterating over alt alleles and get exac af, gonl af and 1000G af
+				String alternateAlleles = record.getString(VcfRepository.ALT);
+				String[] exacAlleleFrequencies = record.get("EXAC_AF") == null ? null : record.getString("EXAC_AF")
+						.split(",", -1);
+				String[] gonlAlleleFrequencies = record.get("GoNL_AF") == null ? null : record.getString("GoNL_AF")
+						.split("\\|", -1);
+				String[] thousandGenomesAlleleFrequencies = record.get("Thousand_Genomes_AF") == null ? null : record
+						.getString("Thousand_Genomes_AF").split(",", -1);
 
-			String[] multiAnn = record.getString("ANN").split(",");
-			String[] altsplit = altStr.split(",", -1);
+				String[] multiAnnotationField = record.getString("ANN").split(",");
 
-			// if multiple alternate alleles, multiple AFs -> split AFs and analyze all
-			// ExAC is separated with comma, GoNL with pipe and 1000G aslo with comma
-
-			// ExAC get all alternate alleles
-			String[] exac_af_split = new String[altsplit.length];
-			if (exac_af_STR != null)
-			{
-				exac_af_split = exac_af_STR.split(",", -1);
-			}
-
-			// GoNL get all alternate alleles
-			String[] gonl_af_split = new String[altsplit.length];
-			if (gonl_af_STR != null)
-			{
-				gonl_af_split = gonl_af_STR.split("\\|", -1);
-			}
-
-			// 1000G get all alternate alleles
-			String[] thousandG_af_split = new String[altsplit.length];
-			if (thousandG_af_STR != null)
-			{
-				thousandG_af_split = thousandG_af_STR.split(",", -1);
-			}
-
-			// iterate over alternate alleles
-			for (int i = 0; i < altsplit.length; i++)
-			{
-				// ExAC (AF must be lower than 0.05)
-				if (exac_af_STR != null && !exac_af_split[i].equals("."))
+				// iterate over alternate alleles
+				for (int i = 0; i < alternateAlleles.split(",", -1).length; i++)
 				{
-					Double exac_af = Double.parseDouble(exac_af_split[i]);
-					if (exac_af > 0.05)
+					if (isFrequencyHigherThanThreshold(exacAlleleFrequencies, i)
+							|| isFrequencyHigherThanThreshold(gonlAlleleFrequencies, i)
+							|| isFrequencyHigherThanThreshold(thousandGenomesAlleleFrequencies, i))
 					{
 						continue;
 					}
-				}
 
-				// GoNL (AF must be lower than 0.05)
-				if (gonl_af_STR != null && !gonl_af_split[i].equals("."))
-				{
-					Double gonl_af = Double.parseDouble(gonl_af_split[i]);
-					if (gonl_af > 0.05)
+					// Get ANN field (or multiple ANN fields) and split it to get impact and filter LOW and MODIFIER
+					// Get only 2 ANN fields (for every allele), could be more than 2 ANN fields!!!
+					String[] annSplit = multiAnnotationField[i].split("\\|", -1);
+					Impact impact = valueOf(annSplit[2]);
+					if (impact.equals(MODIFIER) || impact.equals(LOW))
 					{
 						continue;
 					}
+
+					// convert to VCF entry and print to new file (true, all genotypes must be printed too)
+					bufferedWriter.append(convertToVCF(record, true));
+
+					// If we have a good variant for one of the alternate alleles, go to the next line in the VCF
+					break;
 				}
-
-				// 1000G (AF must be lower than 0.05)
-				if (thousandG_af_STR != null && !thousandG_af_split[i].equals("."))
-				{
-					Double thousandG_af = Double.parseDouble(thousandG_af_split[i]);
-					if (thousandG_af > 0.05)
-					{
-						continue;
-					}
-				}
-
-				// Get ANN field (or multiple ANN fields) and split it to get impact and filter LOW and MODIFIER
-				// Get only 2 ANN fields (for every allele), could be more than 2 ANN fields!!!
-				String ann = multiAnn[i];
-				String[] annSplit = ann.split("\\|", -1);
-				String impact = annSplit[2];
-				if (impact.equals("MODIFIER") || impact.equals("LOW"))
-				{
-					continue;
-				}
-
-				// convert to VCF entry and print to new file (true, all genotypes must be printed too)
-				String vcfEntry = VcfUtils.convertToVCF(record, true);
-
-				pw.println(vcfEntry);
-				pw.flush();
-
-				break;
 			}
 		}
+
+		bufferedWriter.close();
+		vcfRepository.close();
+	}
+
+	private boolean isFrequencyHigherThanThreshold(String[] annotationFrequency, int index)
+	{
+		double threshold = 0.05;
+		if (annotationFrequency != null && !annotationFrequency[index].equals("."))
+		{
+			if (parseDouble(annotationFrequency[index]) > threshold)
+			{
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	/**
@@ -157,12 +121,10 @@ public class FilterVCF
 	 */
 	public static void main(String[] args) throws Exception
 	{
-		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext("org.molgenis.data.annotation");
-		ctx.register(CommandLineAnnotatorConfig.class);
-		FilterVCF filterVCF = ctx.getBean(FilterVCF.class);
+		FilterVCF filterVCF = new FilterVCF();
+
 		filterVCF.parseCommandLineArgs(args);
 		filterVCF.readAndFilterVcf();
-		ctx.close();
 	}
 
 	/**
@@ -180,16 +142,16 @@ public class FilterVCF
 			throw new Exception("Must supply 2 arguments");
 		}
 
-		File vcfFile = new File(args[0]);
+		vcfFile = new File(args[0]);
 		if (!vcfFile.isFile())
 		{
 			throw new Exception("VCF file does not exist or directory: " + vcfFile.getAbsolutePath());
 		}
 
-		File outputFile = new File(args[1]);
+		outputFile = new File(args[1]);
 		if (!outputFile.isFile())
 		{
 			throw new Exception("Output file does not exist or directory: " + outputFile.getAbsolutePath());
-		}		
+		}
 	}
 }

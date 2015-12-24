@@ -1,160 +1,120 @@
 package org.molgenis.data.annotation.graduation.analysis;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Scanner;
+import static org.elasticsearch.common.collect.Maps.newHashMap;
+import static org.molgenis.data.annotation.graduation.utils.FileReadUtils.getAnnotationField;
+import static org.molgenis.data.annotation.graduation.utils.FileReadUtils.readFile;
 
-import org.elasticsearch.common.collect.Maps;
+import java.io.File;
+import java.util.Map;
 
 public class GetOverviewPerPatient
 {
-	public Map<String, String> readSamplesFile(File samplesFile) throws Exception
+	private File samplesFile;
+	private File vcfFile;
+	private File mvFile;
+
+	private Map<String, String> readSamplesFile() throws Exception
 	{
-		Map<String, String> samplesWithSex = Maps.newHashMap();
-
-		Scanner s = new Scanner(samplesFile);
-		String samplesLine = null;
-
-		while (s.hasNextLine())
+		Map<String, String> samplesWithSex = newHashMap();
+		for (String record : readFile(samplesFile, false))
 		{
-			samplesLine = s.nextLine();
-			String[] lineSplit = samplesLine.split("\t", -1);
-			String sample = lineSplit[0];
-			String sex = lineSplit[1];
-			samplesWithSex.put(sample, sex);
+			String[] recordSplit = record.split("\t", -1);
+			samplesWithSex.put(recordSplit[0], recordSplit[1]); // sample and sex
 		}
-		s.close();
 		return samplesWithSex;
 	}
-	
-	public void readMvFile(File mvFile, File vcfFile, Map<String, String> samplesWithSex) throws FileNotFoundException
-	{
-		Map<String, List<String>> infoPerPatient = Maps.newHashMap();
-		
-		Scanner s = new Scanner(mvFile);
-		String mvLine = null;
-		
-		s.nextLine(); // skip header
-		while (s.hasNextLine())
-		{
-			mvLine = s.nextLine();
-			String[] lineSplit = mvLine.split("\t", -1);
 
-			String key = lineSplit[7];
-			String impact = lineSplit[2];
-			String cadd = lineSplit[23];
+	private void readMvFile() throws Exception
+	{
+		Map<String, String> samplesWithSex = readSamplesFile();
+		for (String record : readFile(mvFile, true))
+		{
+			String[] recordSplit = record.split("\t", -1);
+
+			String key = recordSplit[7];
+			String impact = recordSplit[2];
+			String cadd = recordSplit[23];
 
 			String caddImpact = calculateCADD(cadd);
 
-			String childGT = lineSplit[5];
-			String alleles[] = childGT.split("/");
-			String firstAllele = alleles[0];
-			String secondAllele = alleles[1];
+			String exacAF = recordSplit[12];
+			String exacHom = recordSplit[13];
+			String exacHet = recordSplit[14];
 
-			String exacAF = lineSplit[12];
-			String exacHom = lineSplit[13];
-			String exacHet = lineSplit[14];
-
-			String ExacImpact = "";
-			if (exacHom.equals("") || exacHet.equals(""))
+			if (!(exacHom.equals("") || exacHet.equals("")))
 			{
-				continue;
-			}
+				String exacImpact = getExacImpact(recordSplit);
+				String[] multiAnnotationField = getAnnotationField(record, 22).split(",");
 
-			if (firstAllele.equals(secondAllele))
-			{
-				if (Integer.parseInt(exacHom) == 0)
-				{
-					ExacImpact = "homozygous, not seen in ExAC";
-				}
-				else
-				{
-					ExacImpact = "homozygous, seen in ExAC" + " (" + exacHom + ")";
-				}
-			}
-			else
-			{
-				if (Integer.parseInt(exacHet) == 0)
-				{
-					ExacImpact = "Heterozygous, not seen in ExAC";
-				}
-				else
-				{
-					ExacImpact = "Heterozygous, seen in ExAC" + " (" + exacHet + ")";
-				}
-			}
+				// append gene symbol, effect and cDNA to stringBuilder
+				StringBuilder stringBuilder = buildAnnotationString(multiAnnotationField);
 
-			String infoField = lineSplit[22];
-			// String splitInfoField[] = infoField.split("\\|");
-
-			// Get all info fields, for multiple genes
-			String infoFields[] = infoField.split(";", -1);
-			String annField = null;
-			for (String info : infoFields)
-			{
-				if (info.startsWith("ANN="))
-				{
-					annField = info;
-					break;
-				}
-			}
-
-			// append gene symbol, effect and cDNA to sb
-			StringBuffer sb = new StringBuffer();
-			String[] multiAnn = annField.split(",");
-			for (String oneAnn : multiAnn)
-			{
-				String[] annSplit = oneAnn.split("\\|", -1);
-				sb.append(annSplit[3] + " (" + annSplit[1] + ", " + annSplit[9] + "), ");
-			}
-
-			sb.delete(sb.length() - 2, sb.length());
-
-			// if key already exists -> get key and add new info (entries)
-			if (infoPerPatient.containsKey(key))
-			{
-				infoPerPatient.get(key).add(
-						impact + "^" + cadd + "^" + caddImpact + "^" + exacAF + "^" + exacHom + "^" + exacHet + "^"
-								+ ExacImpact);
-			}
-			else
-			{
-				List<String> entries = new ArrayList<String>();
-				entries.add(impact + "^" + cadd + "^" + caddImpact + "^" + exacAF + "^" + exacHom + "^" + exacHet + "^"
-						+ ExacImpact);
-				infoPerPatient.put(key, entries);
-
-				// if unique key in samples -> print patient + info
 				if (samplesWithSex.containsKey(key))
 				{
-					for (String info : entries)
-					{
-						String[] oneLineInfo = info.split("\\^");
-
-						System.out.println("Patient: " + key + " (" + samplesWithSex.get(key) + ")" + "\n"
-								+ "Most likely candidates: " + sb.toString() + "\n" + "Inheritance: " + "de novo"
-								+ "\n" + "Evidence: " + oneLineInfo[0].toLowerCase() + " " + "impact" + ", "
-								+ oneLineInfo[2] + " CADD score" + " (" + oneLineInfo[1] + ")" + ", " + oneLineInfo[6]
-								+ ", " + "Allele frequency: " + oneLineInfo[3] + "\n");
-					}
+					System.out.println("Patient: " + key + " (" + samplesWithSex.get(key) + ")" + "\n"
+							+ "Most likely candidates: " + stringBuilder.substring(0, stringBuilder.length() - 2)
+							+ "\n" + "Inheritance: " + "de novo" + "\n" + "Evidence: " + impact + " " + "impact" + ", "
+							+ caddImpact + " CADD score" + " (" + cadd + ")" + ", " + exacImpact + ", "
+							+ "Allele frequency: " + exacAF + "\n");
 				}
 				else
 				{
 					System.out.println("sample ID: " + key + " not in samples");
 				}
 			}
-
 		}
-		s.close();
 	}
-	
-	public String calculateCADD(String cadd) {
-		
+
+	private StringBuilder buildAnnotationString(String[] multiAnnotationField)
+	{
+		StringBuilder stringBuilder = new StringBuilder();
+		for (String oneAnnotationField : multiAnnotationField)
+		{
+			String[] annSplit = oneAnnotationField.split("\\|", -1);
+			stringBuilder.append(annSplit[3] + " (" + annSplit[1] + ", " + annSplit[9] + "), ");
+		}
+		return stringBuilder;
+	}
+
+	private String getExacImpact(String[] recordSplit)
+	{
+		String exacHom = recordSplit[13];
+		String exacHet = recordSplit[14];
+		String childGT = recordSplit[5];
+		String alleles[] = childGT.split("/");
+		String firstAllele = alleles[0];
+		String secondAllele = alleles[1];
+
+		String exacImpact = "";
+		if (firstAllele.equals(secondAllele))
+		{
+			if (Integer.parseInt(exacHom) == 0)
+			{
+				exacImpact = "homozygous, not seen in ExAC";
+			}
+			else
+			{
+				exacImpact = "homozygous, seen in ExAC" + " (" + exacHom + ")";
+			}
+		}
+		else
+		{
+			if (Integer.parseInt(exacHet) == 0)
+			{
+				exacImpact = "Heterozygous, not seen in ExAC";
+			}
+			else
+			{
+				exacImpact = "Heterozygous, seen in ExAC" + " (" + exacHet + ")";
+			}
+		}
+		return exacImpact;
+	}
+
+	private String calculateCADD(String cadd)
+	{
 		String caddImpact = null;
-		
+
 		// impact CADD score (high, medium, low)
 		if (Double.parseDouble(cadd) >= 20)
 		{
@@ -168,39 +128,42 @@ public class GetOverviewPerPatient
 		{
 			caddImpact = "low";
 		}
-		
+
 		return caddImpact;
 	}
 
 	public static void main(String[] args) throws Exception
+	{
+		GetOverviewPerPatient getOverviewPerPatient = new GetOverviewPerPatient();
+		getOverviewPerPatient.parseCommandLineArgs(args);
+
+		getOverviewPerPatient.readMvFile();
+	}
+
+	private void parseCommandLineArgs(String[] args) throws Exception
 	{
 		if (!(args.length == 3))
 		{
 			throw new Exception("Must supply 3 arguments");
 		}
 
-		File vcfFile = new File(args[0]);
+		vcfFile = new File(args[0]);
 		if (!vcfFile.isFile())
 		{
 			throw new Exception("VCF file does not exist or directory: " + vcfFile.getAbsolutePath());
 		}
 
-		File mvFile = new File(args[1]);
+		mvFile = new File(args[1]);
 		if (!mvFile.isFile())
 		{
 			throw new Exception("Mendelian violations file does not exist or directory: " + mvFile.getAbsolutePath());
 		}
 
-		File samplesFile = new File(args[2]);
+		samplesFile = new File(args[2]);
 		if (!samplesFile.isFile())
 		{
 			throw new Exception("Samples file does not exist or directory: " + samplesFile.getAbsolutePath());
 		}
-
-		GetOverviewPerPatient overviewPatients = new GetOverviewPerPatient();
-		Map<String, String> samplesWithSex = overviewPatients.readSamplesFile(samplesFile);
-		overviewPatients.readMvFile(mvFile, vcfFile, samplesWithSex);
-
 	}
 
 }

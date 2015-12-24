@@ -18,6 +18,7 @@ import org.molgenis.data.Entity;
 import org.molgenis.data.annotation.RepositoryAnnotator;
 import org.molgenis.data.annotation.cmd.CommandLineAnnotatorConfig;
 import org.molgenis.data.annotation.graduation.utils.AnnotatorUtils;
+import org.molgenis.data.annotation.graduation.utils.GenePanelsUtils;
 import org.molgenis.data.vcf.VcfRepository;
 import org.molgenis.data.vcf.utils.VcfUtils;
 import org.molgenis.util.ApplicationContextProvider;
@@ -171,9 +172,9 @@ public class MergePBTwithVCF
 
 			Double exac_af = exac_af_STR != null ? Double.parseDouble(exac_af_STR) : null;
 
-			String gene = GetGeneSymbolColumn.getColFromInfoField(annField, 3);
-			String effect = GetGeneSymbolColumn.getColFromInfoField(annField, 1);
-			String impact = GetGeneSymbolColumn.getColFromInfoField(annField, 2);
+			String gene = getColFromInfoField(annField, 3);
+			String effect = getColFromInfoField(annField, 1);
+			String impact = getColFromInfoField(annField, 2);
 
 			for (String[] entries : pbtEntries.get(key))
 			{
@@ -181,10 +182,10 @@ public class MergePBTwithVCF
 
 				String printReadyVariant = gene + "\t" + effect + "\t" + impact + "\t" + entries[2] + "\t" + entries[3]
 						+ "\t" + entries[4] + "\t" + entries[0] + "\t" + entries[1] + "\t"
-						+ containsMultiGene(gene, GenePanels.pred33wNotch) + "\t"
-						+ containsMultiGene(gene, GenePanels.pred38) + "\t"
-						+ containsMultiGene(gene, GenePanels.predAll82) + "\t"
-						+ containsMultiGene(gene, GenePanels.hpoGenes) + "\t"
+						+ containsMultiGene(gene, GenePanelsUtils.pred33wNotch) + "\t"
+						+ containsMultiGene(gene, GenePanelsUtils.pred38) + "\t"
+						+ containsMultiGene(gene, GenePanelsUtils.predAll82) + "\t"
+						+ containsMultiGene(gene, GenePanelsUtils.hpoGenes) + "\t"
 						+ (exac_af == null ? "" : df.format(exac_af)) + "\t" + exac_ac_hom_STR + "\t" + exac_ac_het_STR
 						+ "\t" + vcfEntry;
 
@@ -287,6 +288,30 @@ public class MergePBTwithVCF
 		}
 		res.delete(res.length() - 2, res.length());
 		return res.toString();
+	}
+	
+	/**
+	 * Parses annotation field from VCF file and returns one or multiple columns.
+	 * 
+	 * @param annField
+	 *            the annotation field from the VCF file
+	 * @param col
+	 *            the column to be parsed
+	 * @return StringBuffer containing geneSymbol from specific annotation field
+	 */
+	private static String getColFromInfoField(String annField, int col)
+	{
+		StringBuffer sb = new StringBuffer();
+		String[] multiAnn = annField.split(","); // for multi-gene!
+		for (String oneAnn : multiAnn)
+		{
+			String[] annSplit = oneAnn.split("\\|", -1);
+			sb.append(annSplit[col] + ", ");
+		}
+
+		sb.delete(sb.length() - 2, sb.length());
+
+		return sb.toString().trim();
 	}
 
 	/**

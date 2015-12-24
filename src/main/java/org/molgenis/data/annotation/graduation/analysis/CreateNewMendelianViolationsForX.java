@@ -1,14 +1,18 @@
 package org.molgenis.data.annotation.graduation.analysis;
 
+import static org.elasticsearch.common.collect.Lists.newArrayList;
 import static org.elasticsearch.common.collect.Maps.newHashMap;
+import static org.molgenis.data.annotation.graduation.utils.FileReadUtils.readFile;
 
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.PrintWriter;
-import java.io.UnsupportedEncodingException;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.List;
 import java.util.Map;
-import java.util.Scanner;
 
+import org.elasticsearch.common.collect.Lists;
 
 /**
  * This class creates a new Mendelian Violation file by analyzing the X chromosome of boys. It prints the result to a
@@ -18,10 +22,26 @@ import java.util.Scanner;
  */
 public class CreateNewMendelianViolationsForX
 {
-	File pedFile;
-	File mvFile;
-	File outputFile;
-	
+	private File pedFile;
+	private File mvFile;
+	private File outputFile;
+
+	// PAR regions:
+	// The pseudoautosomal regions 60,001-2,699,520 and 154,931,044-155,270,560 with the ploidy 2
+	// { from=>1, to=>60_000, M=>1 }
+	// { from=>2_699_521, to=>154_931_043, M=>1 }
+
+	// | chrom_2 | start_2 | end_2 |
+	// +---------+----------+-----------+
+	// | X | 60001 | 2699520 |
+	// | X | 154931044| 155270560 |
+
+	// PAR regions
+	private static final int PAR1_START = 60001;
+	private static final int PAR1_END = 2699520;
+	private static final int PAR2_START = 154931044;
+	private static final int PAR2_END = 155270560;
+
 	/**
 	 * Parses the PED file.
 	 * 
@@ -31,19 +51,15 @@ public class CreateNewMendelianViolationsForX
 	 * @throws FileNotFoundException
 	 *             when file does not exists
 	 */
-	public Map<String, String> readPedFile() throws FileNotFoundException
+	private Map<String, String> readPedFile() throws FileNotFoundException
 	{
 		Map<String, String> pedFamilyAndSex = newHashMap();
-		Scanner s = new Scanner(pedFile);
-		String pedLine = null;
 
-		while (s.hasNextLine())
+		for (String record : readFile(pedFile, false))
 		{
-			pedLine = s.nextLine();
-			String[] PedLineSplit = pedLine.split("\t", -1);
-			pedFamilyAndSex.put(PedLineSplit[0], PedLineSplit[4]);
+			String[] recordSplit = record.split("\t", -1);
+			pedFamilyAndSex.put(recordSplit[0], recordSplit[4]);
 		}
-		s.close();
 		return pedFamilyAndSex;
 	}
 
@@ -56,48 +72,50 @@ public class CreateNewMendelianViolationsForX
 	 *            the file where the "non-X" chromsomes are printed to
 	 * @param pedFamilyAndSex
 	 *            a map containing the family ID and sex of patient
-	 * @throws FileNotFoundException
-	 *             when file does not exists
-	 * @throws UnsupportedEncodingException
-	 *             when output file is not encoded correctly
+	 * @throws IOException
 	 */
-	public void readMvFile(Map<String, String> pedFamilyAndSex)
-			throws FileNotFoundException, UnsupportedEncodingException
+	private List<String> parseXchromosomesFromMendelianViolationFile() throws IOException
 	{
+		List<String> Xchromosomes = newArrayList();
 
-		PrintWriter pw = new PrintWriter(outputFile, "UTF-8");
+		FileWriter fileWriter = new FileWriter(outputFile, true);
+		BufferedWriter bufferedWriter = new BufferedWriter(fileWriter);
 
-		Scanner s = new Scanner(mvFile);
-		String mvLine = "";
-		StringBuilder onlyX = new StringBuilder();
-
-		while (s.hasNextLine())
+		for (String record : readFile(mvFile, false))
 		{
-			mvLine = s.nextLine();
-
-			// delete empty fields
-			if (mvLine.contains(".\t.\t.\t."))
-			{
-				continue;
-			}
-			// delete missing genotypes
-			if (mvLine.contains("./."))
-			{
-				continue;
-			}
-			// get all lines from X chromosome and add to onlyX
-			if (mvLine.startsWith("X"))
-			{
-				onlyX.append(mvLine + "\n");
-			}
-			else
-			{
-				pw.println(mvLine);
-				pw.flush();
-			}
+			writeAutosomalChromosomesToFile(bufferedWriter, Xchromosomes, record);
 		}
-		s.close();
-		getSexOfPatient(pw, onlyX, pedFamilyAndSex);
+
+		bufferedWriter.close();
+		return Xchromosomes;
+	}
+
+	/**
+	 * 
+	 * @param bufferedWriter
+	 * @param Xchromosomes
+	 * @param record
+	 * @throws IOException
+	 */
+	private void writeAutosomalChromosomesToFile(BufferedWriter bufferedWriter, List<String> Xchromosomes, String record)
+			throws IOException
+	{
+		// delete empty fields and delete missing genotypes
+		if (record.contains(".\t.\t.\t.") || record.contains("./."))
+		{
+			return;
+		}
+
+		if (record.startsWith("X"))
+		{
+			// If it is an X chromosome, add it to the list
+			Xchromosomes.add(record);
+		}
+		else
+		{
+			// If it is an autosomal chromosome, write it to file
+			bufferedWriter.append(record + "\n");
+		}
 	}
 
 	/**
@@ -105,91 +123,88 @@ public class CreateNewMendelianViolationsForX
 	 * 
 	 * @param pw
 	 *            printwriter where output is written to
-	 * @param onlyX
+	 * @param Xchromosomes
 	 *            a list containing only the lines from the MV file of X chromsome
 	 * @param pedFamilyAndSex
 	 *            a map containing the family ID and sex of patient
+	 * @throws IOException
 	 */
-	public void getSexOfPatient(PrintWriter pw, StringBuilder onlyX, Map<String, String> pedFamilyAndSex)
+	public void getSexOfPatient(List<String> Xchromosomes) throws IOException
 	{
-		String[] Xlines = null;
-		StringBuilder onlyXwithSex = new StringBuilder();
+		FileWriter fileWriter = new FileWriter(outputFile, true);
+		BufferedWriter bufferedWriter = new BufferedWriter(fileWriter);
 
-		Xlines = onlyX.toString().split("\n");
-
-		// for every X line, get fam ID
-		// If fam_id matches with ped fam_id -> get sex of patient
-		for (String line : Xlines)
-		{
-			String[] mvColumns = line.split("\t");
-			String mvFamID = mvColumns[3];
-
-			if (pedFamilyAndSex.containsKey(mvFamID))
-			{
-				onlyXwithSex.append(line + "\t" + pedFamilyAndSex.get(mvFamID) + "\n");
-			}
-		}
-
-		// PAR regions:
-		// The pseudoautosomal regions 60,001-2,699,520 and 154,931,044-155,270,560 with the ploidy 2
-		// { from=>1, to=>60_000, M=>1 }
-		// { from=>2_699_521, to=>154_931_043, M=>1 }
-
-		// | chrom_2 | start_2 | end_2 |
-		// +---------+----------+-----------+
-		// | X | 60001 | 2699520 |
-		// | X | 154931044| 155270560 |
-
-		int PAR1_start = 60001;
-		int PAR1_end = 2699520;
-		int PAR2_start = 154931044;
-		int PAR2_end = 155270560;
+		Map<String, String> familyAndSexPedMap = readPedFile();
+		List<String> listOfPatientSexes = getListOfPatientSexes(Xchromosomes, familyAndSexPedMap);
 
 		// Read per line and get sex, pos and gt
-		String[] onlyXwithSexLines = onlyXwithSex.toString().split("\n");
-		int count = 0;
-		for (String Xline : onlyXwithSexLines)
+		for (String patientSex : listOfPatientSexes)
 		{
-			String[] splittedLine = Xline.split("\t");
-
-			String sex = splittedLine[17];
-			String pos = splittedLine[1];
-			String childGT = splittedLine[13];
-			String motherGT = splittedLine[5];
-
-			// Get alleles of child
-			String[] childAlleles = childGT.split("/");
-			String firstChildAllele = childAlleles[0];
-			String secondChildAllele = childAlleles[1];
-
-			// get alleles of mother
-			String[] motherAlleles = motherGT.split("/");
-			String firstMotherAllele = motherAlleles[0];
-			String secondMotherAllele = motherAlleles[1];
-
-			// if male AND no PAR1 regio AND no PAR2 regio AND child is hemizygous AND mother has allele
-			// everything has to be true, if one thing is false, don't filter
-			if (sex.equals("1") && (!((Integer.parseInt(pos) > PAR1_start) && (Integer.parseInt(pos) < PAR1_end)))
-					&& (!((Integer.parseInt(pos) > PAR2_start) && (Integer.parseInt(pos) < PAR2_end)))
-					&& firstChildAllele.equals(secondChildAllele)
-					&& (firstMotherAllele.equals(firstChildAllele) || secondMotherAllele.equals(firstChildAllele)))
+			String[] splittedLine = patientSex.split("\t");
+			if (isFixedPloidy(splittedLine))
 			{
 				continue;
 			}
 			else
 			{
-				count++;
-				// System.out.println(Xline);
-				// print every line to new mendelian violations file, except sex
-				String withoutSex = Xline.replaceAll(splittedLine[17], "");
-				// remove last tab
-
-				pw.println(Xline);
-				pw.flush();
+				bufferedWriter.append(patientSex + "\n");
 			}
 		}
-		// System.out.println(count);
-		pw.close();
+		bufferedWriter.close();
+	}
+
+	/**
+	 * 
+	 * @param splittedLine
+	 * @return
+	 */
+	private boolean isFixedPloidy(String[] splittedLine)
+	{
+		String sex = splittedLine[17];
+		String position = splittedLine[1];
+		String childGT = splittedLine[13];
+		String motherGT = splittedLine[5];
+
+		// Get alleles of child
+		String[] childAlleles = childGT.split("/");
+		String firstChildAllele = childAlleles[0];
+		String secondChildAllele = childAlleles[1];
+
+		// get alleles of mother
+		String[] motherAlleles = motherGT.split("/");
+		String firstMotherAllele = motherAlleles[0];
+		String secondMotherAllele = motherAlleles[1];
+
+		// if male AND no PAR1 regio AND no PAR2 regio AND child is hemizygous AND mother has allele
+		// everything has to be true, if one thing is false, don't filter
+		return sex.equals("1")
+				&& (!((Integer.parseInt(position) > PAR1_START) && (Integer.parseInt(position) < PAR1_END)))
+				&& (!((Integer.parseInt(position) > PAR2_START) && (Integer.parseInt(position) < PAR2_END)))
+				&& firstChildAllele.equals(secondChildAllele)
+				&& (firstMotherAllele.equals(firstChildAllele) || secondMotherAllele.equals(firstChildAllele));
+	}
+
+	/**
+	 * for every X line, get family ID If family ID matches with ped family ID -> get sex of patient
+	 * 
+	 * @param Xchromosomes
+	 * @param familyAndSexPedMap
+	 * @return
+	 */
+	private List<String> getListOfPatientSexes(List<String> Xchromosomes, Map<String, String> familyAndSexPedMap)
+	{
+		List<String> listOfPatientSexes = Lists.newArrayList();
+		for (String Xchromosome : Xchromosomes)
+		{
+			String[] mendelianViolationColumns = Xchromosome.split("\t");
+			String mendelianViolationFamilyID = mendelianViolationColumns[3];
+
+			if (familyAndSexPedMap.containsKey(mendelianViolationFamilyID))
+			{
+				listOfPatientSexes.add(Xchromosome + "\t" + familyAndSexPedMap.get(mendelianViolationFamilyID));
+			}
+		}
+		return listOfPatientSexes;
 	}
 
 	/**
@@ -204,8 +219,9 @@ public class CreateNewMendelianViolationsForX
 	{
 		CreateNewMendelianViolationsForX createNewMendelianViolationsForX = new CreateNewMendelianViolationsForX();
 		createNewMendelianViolationsForX.parseCommandLineArgs(args);
-		Map<String, String> pedFamilyAndSex = createNewMendelianViolationsForX.readPedFile();
-		createNewMendelianViolationsForX.readMvFile(pedFamilyAndSex);
+
+		List<String> Xchromosomes = createNewMendelianViolationsForX.parseXchromosomesFromMendelianViolationFile();
+		createNewMendelianViolationsForX.getSexOfPatient(Xchromosomes);
 	}
 
 	/**
@@ -218,21 +234,30 @@ public class CreateNewMendelianViolationsForX
 	 */
 	public void parseCommandLineArgs(String[] args) throws Exception
 	{
-		File pedFile = new File(args[0]);
+		pedFile = new File(args[0]);
 		if (!pedFile.isFile())
 		{
 			throw new Exception("Ped file does not exist or directory: " + pedFile.getAbsolutePath());
 		}
 
-		File mvFile = new File(args[1]);
+		mvFile = new File(args[1]);
 		if (!mvFile.isFile())
 		{
 			throw new Exception("Mendelian violation file does not exist or directory: " + mvFile.getAbsolutePath());
 		}
-		File outputFile = new File(args[2]);
-		if (!outputFile.isFile())
+		outputFile = new File(args[2]);
+		if (!outputFile.exists())
 		{
-			throw new Exception("Output file does not exist or directory: " + outputFile.getAbsolutePath());
+			outputFile.createNewFile();
+		}
+		else if (!outputFile.isFile())
+		{
+			throw new Exception("Output file does not exist or directory: " + pedFile.getAbsolutePath());
+		}
+		else
+		{
+			outputFile.delete();
+			outputFile.createNewFile();
 		}
 	}
 }

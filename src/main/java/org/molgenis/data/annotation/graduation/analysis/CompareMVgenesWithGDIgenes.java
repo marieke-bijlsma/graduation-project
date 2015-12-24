@@ -1,16 +1,14 @@
 package org.molgenis.data.annotation.graduation.analysis;
 
 import static org.elasticsearch.common.collect.Lists.newArrayList;
-import static org.molgenis.data.annotation.graduation.utils.FileReadUtils.readMendelianViolationFile;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Scanner;
 
 import org.elasticsearch.common.collect.Lists;
+import org.molgenis.data.annotation.graduation.utils.FileReadUtils;
 
 /**
  * This class compares the genes from the variants in the Mendelian violation file with the genes from the Gene Damage
@@ -20,8 +18,10 @@ import org.elasticsearch.common.collect.Lists;
  */
 public class CompareMVgenesWithGDIgenes
 {
-	File mvFile;
-	File gdiFile;
+	private File gdiFile;
+
+	private File mendelianViolationFile = new File(
+			"/Users/molgenis/Documents/graduation_project/mendelianViolationFiles/mendelian_violation_Xadjusted_replicates.txt");
 
 	/**
 	 * Reads the Mendelian violation file and adds the gene column to a new ArrayList.
@@ -29,14 +29,14 @@ public class CompareMVgenesWithGDIgenes
 	 * @param mvFile
 	 *            the Mendelian violation file to be parsed
 	 * @return mvGenes a list containing the genes from this file
-	 * @throws FileNotFoundException 
+	 * @throws FileNotFoundException
 	 * 
 	 */
 	public List<String> readMVfile() throws FileNotFoundException
 	{
 		List<String> mendelianViolationGenes = newArrayList();
 
-		for (String record : readMendelianViolationFile())
+		for (String record : FileReadUtils.readFile(mendelianViolationFile, true))
 		{
 			String[] lineSplit = record.split("\t", -1);
 			mendelianViolationGenes.add(lineSplit[0]); // gene column
@@ -54,20 +54,16 @@ public class CompareMVgenesWithGDIgenes
 	 * @throws IOException
 	 *             when file is not correct
 	 */
-	public ArrayList<String> readGDIfile() throws IOException
+	public List<String> readGDIfile() throws IOException
 	{
-		ArrayList<String> gdiGenes = Lists.newArrayList();
-
-		Scanner scanGDI = new Scanner(gdiFile);
-		String gdiLine = null;
-
-		while (scanGDI.hasNextLine())
-		{
-			gdiLine = scanGDI.nextLine();
-			String[] lineSplit = gdiLine.split("\t", -1);
-			gdiGenes.add(lineSplit[0]); // gene column
+		List<String> gdiGenes = Lists.newArrayList();
+		List<String> records = FileReadUtils.readFile(gdiFile, false);
+		
+		for(String record : records) {
+			String[] recordSplit = record.split("\t", -1);
+			gdiGenes.add(recordSplit[0]); // gene column
 		}
-		scanGDI.close();
+		
 		return gdiGenes;
 	}
 
@@ -112,7 +108,7 @@ public class CompareMVgenesWithGDIgenes
 		CompareMVgenesWithGDIgenes compareGenes = new CompareMVgenesWithGDIgenes();
 		compareGenes.parseCommandLineArgs(args);
 		List<String> mvGenes = compareGenes.readMVfile();
-		ArrayList<String> gdiGenes = compareGenes.readGDIfile();
+		List<String> gdiGenes = compareGenes.readGDIfile();
 		compareGenes.compare(mvGenes, gdiGenes);
 	}
 
@@ -131,13 +127,13 @@ public class CompareMVgenesWithGDIgenes
 			throw new Exception("Must supply 2 arguments");
 		}
 
-		File mvFile = new File(args[0]);
-		if (!mvFile.isFile())
+		mendelianViolationFile = new File(args[0]);
+		if (!mendelianViolationFile.isFile())
 		{
 			throw new Exception("Input Mendelian violation file does not exist or is not a directory: "
-					+ mvFile.getAbsolutePath());
+					+ mendelianViolationFile.getAbsolutePath());
 		}
-		File gdiFile = new File(args[1]);
+		gdiFile = new File(args[1]);
 		if (!gdiFile.isFile())
 		{
 			throw new Exception("Input GDI file does not exist or is not a directory: " + gdiFile.getAbsolutePath());

@@ -1,11 +1,12 @@
 package org.molgenis.data.annotation.graduation.analysis;
 
-import static org.elasticsearch.common.collect.Lists.newArrayList;
+import static org.molgenis.data.annotation.graduation.utils.FileReadUtils.getAnnotationField;
+import static org.molgenis.data.annotation.graduation.utils.FileReadUtils.readFile;
 
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.util.ArrayList;
-import java.util.Scanner;
+import java.io.IOException;
+import java.util.List;
 
 /**
  * This class reads a VCF file and parses the gene symbol column.
@@ -14,105 +15,58 @@ import java.util.Scanner;
  */
 public class GetGeneSymbolColumn
 {
+	private File file = new File(
+			"/Users/molgenis/Documents/graduation_project/output_mergePBTwithVCF/output_mergePBTwithVCF_mendViolSampleFamily_noGenotypes_copy.txt");
+
 	/**
 	 * Reads a VCF file and returns lines.
 	 * 
 	 * @return record a list containing all lines from VCF file
-	 * @throws FileNotFoundException when VCF file is not found
+	 * @throws FileNotFoundException
+	 *             when VCF file is not found
 	 */
-	private ArrayList<String> readFile() throws FileNotFoundException
+	private List<String> getVcfRecords() throws FileNotFoundException
 	{
-		ArrayList<String> record = newArrayList();
-		Scanner s = new Scanner(
-				new File(
-						"/Users/molgenis/Documents/graduation_project/output_mergePBTwithVCF/output_mergePBTwithVCF_mendViolSampleFamily_noGenotypes_copy.txt"));
-
-		// skipping header
-		s.nextLine();
-
-		while (s.hasNextLine())
-		{
-			String line = s.nextLine();
-			record.add(line);
-		}
-		s.close();
-		return record;
+		return readFile(file, true);
 	}
 
 	/**
 	 * Parses gene symbol column from VCF file and print the gene with associated impact.
 	 * 
-	 * @param record a list containing all lines from VCF file
+	 * @param record
+	 *            a list containing all lines from VCF file
+	 * @throws IOException
 	 */
-	public void getGeneColumn(ArrayList<String> record)
+	public void getGeneColumn(List<String> records) throws IOException
 	{
 		// Variant can have multiple gene symbols with different impacts
 		// Variant then contains multiple times the impact, followed by different gene symbols
 
-		for (String line : record)
+		for (String record : records)
 		{
-			String[] split = line.split("\t");
+			StringBuilder stringBuilder = new StringBuilder();
 
-			String infoCol = split[7];
-			// System.out.println(infoCol);
-
-			String infoFields[] = infoCol.split(";", -1);
-			String annField = null;
-			for (String infoField : infoFields)
+			String[] multiAnnotationFields = getAnnotationField(record, 7).split(",");
+			for (String oneAnnotationField : multiAnnotationFields)
 			{
-				if (infoField.startsWith("ANN="))
-				{
-					annField = infoField;
-					break;
-				}
+				String[] annSplit = oneAnnotationField.split("\\|", -1);
+				stringBuilder.append(annSplit[3] + " (" + annSplit[1] + "), ");
 			}
 
-			StringBuffer sb = new StringBuffer();
-			String[] multiAnn = annField.split(",");
-			for (String oneAnn : multiAnn)
-			{
-				String[] annSplit = oneAnn.split("\\|", -1);
-				sb.append(annSplit[3] + " (" + annSplit[1] + "), "); // gene symbol, impact
-			}
-
-			sb.delete(sb.length() - 2, sb.length());
-
-			System.out.println(sb.toString().trim());
+			System.out.println(stringBuilder.substring(0, stringBuilder.length() - 2));
 		}
-	}
-
-	/**
-	 * Parses annotation field from VCF file and returns one or multiple columns.
-	 * 
-	 * @param annField the annotation field from the VCF file
-	 * @param col the column to be parsed
-	 * @return StringBuffer containing geneSymbol from specific annotation field
-	 */
-	public static String getColFromInfoField(String annField, int col)
-	{
-		StringBuffer sb = new StringBuffer();
-		String[] multiAnn = annField.split(","); // for multi-gene!
-		for (String oneAnn : multiAnn)
-		{
-			String[] annSplit = oneAnn.split("\\|", -1);
-			sb.append(annSplit[col] + ", ");
-		}
-
-		sb.delete(sb.length() - 2, sb.length());
-
-		return sb.toString().trim();
 	}
 
 	/**
 	 * The main method, invokes readFile() and getGeneColumn().
 	 * 
 	 * @param args
-	 * @throws FileNotFoundException when VCF file is not found
+	 * @throws IOException
 	 */
-	public static void main(String[] args) throws FileNotFoundException
+	public static void main(String[] args) throws IOException
 	{
 		GetGeneSymbolColumn getColumn = new GetGeneSymbolColumn();
-		ArrayList<String> record = getColumn.readFile();
+		List<String> record = getColumn.getVcfRecords();
 		getColumn.getGeneColumn(record);
 	}
 }

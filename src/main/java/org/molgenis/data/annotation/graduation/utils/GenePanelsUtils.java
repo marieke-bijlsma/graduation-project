@@ -1,4 +1,4 @@
-package org.molgenis.data.annotation.graduation.analysis;
+package org.molgenis.data.annotation.graduation.utils;
 
 import java.util.Arrays;
 import java.util.List;
@@ -8,9 +8,9 @@ import java.util.List;
  * 
  * @author mbijlsma
  */
-public class GenePanels
+public class GenePanelsUtils
 {
-	static List<String> hpoGenes = Arrays.asList(new String[]
+	public static List<String> hpoGenes = Arrays.asList(new String[]
 	{ "ABCC9", "ACTB", "ADAMTS10", "ADAMTSL2", "ARVCF", "B3GALT6", "B3GAT3", "B4GALT7", "BBS2", "BRAF", "BRCA2",
 			"BRIP1", "CBL", "CHRNG", "COMT", "EHMT1", "ELN", "ERCC4", "FAM58A", "FANCA", "FANCB", "FANCC", "FANCD2",
 			"FANCE", "FANCF", "FANCG", "FANCI", "FANCL", "FANCM", "FBLN5", "FBN1", "FBN2", "FLNA", "FOXF1", "GBA",
@@ -18,7 +18,7 @@ public class GenePanels
 			"NAA10", "NOTCH1", "NOTCH2", "PALB2", "RAD51C", "RPL26", "RPS6KA3", "SKI", "SLX4", "SMAD6", "SNIP1",
 			"TAB2", "TAF2", "TBX1", "TGFB2", "TGFBR1", "TGFBR2", "TMEM70", "UFD1L" });
 
-	static List<String> pred38 = Arrays.asList(new String[]
+	public static List<String> pred38 = Arrays.asList(new String[]
 	{ "RBL1", "ZNF367", "MCM2", "MCM6", "FIGNL1", "TIMELESS", "POLD1", "WDR76", "RP5-1086D14.6", "CDCA4", "POLA2",
 			"C11orf82", "MCM5", "TMPO", "CDC45", "CSTF2", "ZWILCH", "FEN1", "CENPI", "NCAPG2", "UHRF1", "MCM3",
 			"FBXO5", "RRM2", "PRIM1", "TACC3", "RNASEH2A", "PARPBP", "MYBL2", "RFC3", "BLM", "NCAPH", "MCM7", "TRAIP",
@@ -33,7 +33,7 @@ public class GenePanels
 			"KIAA0196", "CEP57", "ESCO2", "TMEM70", "ERCC4", "D2HGDH", "FANCB", "B3GALT6", "EHMT1", "FANCF", "FANCA",
 			"FANCM", "SLX4", "TTC37", "FANCG" });
 
-	static List<String> predAll82 = Arrays.asList(new String[]
+	public static List<String> predAll82 = Arrays.asList(new String[]
 	{ "GANAB", "CCDC102A", "CHST14", "ABL1", "SEC61A1", "TRIM28", "POFUT1", "PRPF8", "FZD2", "RPN2", "SNRNP200",
 			"INPPL1", "GLT25D1", "FUBP3", "PTPN9", "CNOT6", "PTBP1", "VCP", "PRKCSH", "SCRIB", "CDC25B", "RBM10",
 			"DHX9", "SLC2A4RG", "MAML1", "SEC16A", "SEPT2", "COPA", "TLN1", "HCFC1", "TMEM248", "STT3B", "HEATR2",
@@ -52,7 +52,7 @@ public class GenePanels
 			"TBX1", "FANCF", "NKX2-5", "FANCA", "FANCM", "SLX4", "FLNA", "CHRNG", "ADAMTSL2", "TTC37", "SLC2A10",
 			"NR2F2", "FANCG" });
 
-	static List<String> pred33wNotch = Arrays.asList(new String[]
+	public static List<String> pred33wNotch = Arrays.asList(new String[]
 	{ "LTBP3", "SORBS3", "GPR124", "COL6A2", "MRC2", "TPM2", "HSPG2", "COL3A1", "SSC5D", "FBLN2", "FHL1", "STON1",
 			"EMP1", "BGN", "COL6A1", "MMP2", "TNS1", "TGFB1I1", "ATOH8", "TIMP3", "MEGF6", "COL18A1", "CTGF", "LTBP4",
 			"PLXND1", "LRP1", "PEAR1", "IGFBP7", "ZCCHC24", "LOXL1", "TGFBI", "CCDC80", "ZBTB4", "MATN2", "SEPN1",

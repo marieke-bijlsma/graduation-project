@@ -1,11 +1,13 @@
 package org.molgenis.data.annotation.graduation.analysis;
 
+import static org.elasticsearch.common.collect.Lists.newArrayList;
+import static org.elasticsearch.common.collect.Maps.newHashMap;
+import static org.molgenis.data.annotation.graduation.utils.FileReadUtils.readFile;
+
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map.Entry;
-import java.util.Scanner;
+import java.util.List;
+import java.util.Map;
 
 /**
  * This class compares the family IDs from both the PED file as the PBT file, to get the right child IDs associated with
@@ -15,9 +17,9 @@ import java.util.Scanner;
  */
 public class GetChildSampleIds
 {
-	File pedFile;
-	File pbtFile;
-	
+	private File pedFile;
+	private File pbtFile;
+
 	/**
 	 * Reads the PED file and adds the family ID and child ID to a new HashMap.
 	 * 
@@ -27,19 +29,15 @@ public class GetChildSampleIds
 	 * @throws IOException
 	 *             when the input file is not correct
 	 */
-	public HashMap<String, String> readPed() throws IOException
+	public Map<String, String> readPed() throws IOException
 	{
-		HashMap<String, String> pedFamilyAndChildIds = new HashMap<String, String>();
-
-		Scanner s = new Scanner(pedFile);
-		String line = null;
-		while (s.hasNextLine())
+		Map<String, String> pedFamilyAndChildIds = newHashMap();
+		for (String record : readFile(pedFile, false))
 		{
-			line = s.nextLine();
-			String[] lineSplit = line.split("\t", -1);
-			pedFamilyAndChildIds.put(lineSplit[0], lineSplit[1]); // [family ID, child ID]
+
+			String[] recordSplit = record.split("\t", -1);
+			pedFamilyAndChildIds.put(recordSplit[0], recordSplit[1]); // [family ID, child ID]
 		}
-		s.close();
 		return pedFamilyAndChildIds;
 	}
 
@@ -52,62 +50,43 @@ public class GetChildSampleIds
 	 * @throws IOException
 	 *             when input file is not correct
 	 */
-	public ArrayList<String> readPbt() throws IOException
+	public List<String> getFamilyIdentifiersFromPbtFile() throws IOException
 	{
-		ArrayList<String> pbtFamilyIds = new ArrayList<String>();
-
-		Scanner s = new Scanner(pbtFile);
-		String line = null;
-		while (s.hasNextLine())
+		List<String> pbtFamilyIds = newArrayList();
+		for (String record : readFile(pbtFile, false))
 		{
-			line = s.nextLine();
-			String[] lineSplit = line.split("\t", -1);
-			pbtFamilyIds.add(lineSplit[3]); // [family ID]
+			String[] recordSplit = record.split("\t", -1);
+			pbtFamilyIds.add(recordSplit[3]); // [family ID]
 		}
-		s.close();
 		return pbtFamilyIds;
 	}
 
 	/**
-	 * Merges the right family ID with the right child ID and prints both separately.
+	 * Merges the right family ID with the right child ID and prints both tab separated.
 	 * 
 	 * @param pedFamilyAndChildIds
 	 *            a HashMap containing family and child IDs
 	 * @param pbtFamilyIds
 	 *            an ArrayList containing family IDs
+	 * @throws IOException
 	 */
-	public void mergeChildAndFamilyId(HashMap<String, String> pedFamilyAndChildIds, ArrayList<String> pbtFamilyIds)
+	public void mergeChildAndFamilyId() throws IOException
 	{
-		HashMap<Integer, HashMap<String, String>> mergedChildAndFamilyId = new HashMap<Integer, HashMap<String, String>>();
+		Map<String, String> pedFamilyAndChildIds = readPed();
+		List<String> pbtFamilyIds = getFamilyIdentifiersFromPbtFile();
 
-		int count = 0;
-		for (String id : pbtFamilyIds)
+		for (String pbtFamilyId : pbtFamilyIds)
 		{
-			if (pedFamilyAndChildIds.keySet().contains(id))
+			if (pedFamilyAndChildIds.containsKey(pbtFamilyId))
 			{
-				count += 1;
-
-				mergedChildAndFamilyId.put(count, new HashMap<String, String>());
-				mergedChildAndFamilyId.get(count).put(id, pedFamilyAndChildIds.get(id));
-			}
-		}
-
-		// print both values separately to paste in column in pbt file
-		for (Entry<Integer, HashMap<String, String>> CountEntry : mergedChildAndFamilyId.entrySet())
-		{
-			for (Entry<String, String> IDEntry : CountEntry.getValue().entrySet())
-			{
-				// String family = IDEntry.getKey();
-				String sample = IDEntry.getValue();
-
-				// System.out.println(family);
-				System.out.println(sample);
+				String sampleIdentifier = pedFamilyAndChildIds.get(pbtFamilyId);
+				System.out.println(pbtFamilyId + "\t" + sampleIdentifier);
 			}
 		}
 	}
 
 	/**
-	 * The main method, invokes readPed(), readPbt(), and mergeChildAndFamilyId().
+	 * The main method, invokes mergeChildAndFamilyId().
 	 * 
 	 * @param args
 	 *            the command line arguments
@@ -118,9 +97,8 @@ public class GetChildSampleIds
 	{
 		GetChildSampleIds getChildSampleIds = new GetChildSampleIds();
 		getChildSampleIds.parseCommandLineArgs(args);
-		HashMap<String, String> pedFamilyAndChildIds = getChildSampleIds.readPed();
-		ArrayList<String> pbtFamilyIds = getChildSampleIds.readPbt();
-		getChildSampleIds.mergeChildAndFamilyId(pedFamilyAndChildIds, pbtFamilyIds);
+
+		getChildSampleIds.mergeChildAndFamilyId();
 	}
 
 	public void parseCommandLineArgs(String[] args) throws Exception
@@ -130,13 +108,13 @@ public class GetChildSampleIds
 			throw new Exception("Must supply 2 arguments");
 		}
 
-		File pedFile = new File(args[0]);
+		pedFile = new File(args[0]);
 		if (!pedFile.isFile())
 		{
 			throw new Exception("Input ped file does not exist or is not a directory: " + pedFile.getAbsolutePath());
 		}
 
-		File pbtFile = new File(args[1]);
+		pbtFile = new File(args[1]);
 		if (!pbtFile.isFile())
 		{
 			throw new Exception("PBT file does not exist or is not a directory: " + pbtFile.getAbsolutePath());
