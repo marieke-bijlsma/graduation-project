@@ -3,39 +3,35 @@ package org.molgenis.data.annotation.graduation.analysis;
 import static org.elasticsearch.common.collect.Lists.newArrayList;
 import static org.elasticsearch.common.collect.Maps.newHashMap;
 
+import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.PrintWriter;
-import java.io.UnsupportedEncodingException;
-import java.util.ArrayList;
-import java.util.HashMap;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
-import java.util.Scanner;
 
-import org.elasticsearch.common.collect.Lists;
-import org.elasticsearch.common.collect.Maps;
 import org.molgenis.data.annotation.graduation.utils.FileReadUtils;
 
 public class MergeVCFwithCADD
 {
 	private File vcfFile;
 	private File caddFile;
-	private File output_mergeVCFwithCADD;
+	private File outputFile;
 
 	List<String> VcfChrPos = newArrayList();
 	Map<String, String> mergedVcfAndCadd = newHashMap();
 
-	public void run() throws FileNotFoundException, UnsupportedEncodingException
+	public void readAndProcessFile() throws IOException
 	{
-		PrintWriter pw = new PrintWriter(output_mergeVCFwithCADD, "UTF-8");
+		FileWriter fileWriter = new FileWriter(outputFile, true);
+		BufferedWriter bufferedWriter = new BufferedWriter(fileWriter);
 
 		// Write new header to file
-		pw.println("GENE_SYMBOL" + "\t" + "EFFECT" + "\t" + "IMPACT" + "\t" + "MOTHER_GT" + "\t" + "FATHER_GT" + "\t"
-				+ "CHILD_GT" + "\t" + "FAMILY_ID" + "\t" + "SAMPLE_ID" + "\t" + "pred33wNotch" + "\t" + "pred38" + "\t"
-				+ "predAll82" + "\t" + "hpoGenes" + "\t" + "ExAC allele frequency" + "\t" + "homozyg in ExAC" + "\t"
-				+ "hets in ExAC" + "\t" + "CHROM" + "\t" + "POS" + "\t" + "ID" + "\t" + "REF" + "\t" + "ALT" + "\t"
-				+ "QUAL" + "\t" + "FILTER" + "\t" + "INFO" + "\t" + "CADD_PHRED");
+		bufferedWriter.append("GENE_SYMBOL" + "\t" + "EFFECT" + "\t" + "IMPACT" + "\t" + "MOTHER_GT" + "\t"
+				+ "FATHER_GT" + "\t" + "CHILD_GT" + "\t" + "FAMILY_ID" + "\t" + "SAMPLE_ID" + "\t" + "pred33wNotch"
+				+ "\t" + "pred38" + "\t" + "predAll82" + "\t" + "hpoGenes" + "\t" + "ExAC allele frequency" + "\t"
+				+ "homozyg in ExAC" + "\t" + "hets in ExAC" + "\t" + "CHROM" + "\t" + "POS" + "\t" + "ID" + "\t"
+				+ "REF" + "\t" + "ALT" + "\t" + "QUAL" + "\t" + "FILTER" + "\t" + "INFO" + "\t" + "CADD_PHRED\n");
 
 		for (String record : FileReadUtils.readFile(caddFile, true))
 		{
@@ -49,15 +45,15 @@ public class MergeVCFwithCADD
 			String CaddChrPos = caddChr + "_" + caddPos;
 			mergedVcfAndCadd.put(CaddChrPos, caddPhred);
 		}
-
-		printVcfFileWithCadd(pw);
-
-		pw.flush();
-		pw.close();
+		printVcfFileWithCadd();
+		bufferedWriter.close();
 	}
 
-	private void printVcfFileWithCadd(PrintWriter pw) throws FileNotFoundException
+	private void printVcfFileWithCadd() throws IOException
 	{
+		FileWriter fileWriter = new FileWriter(outputFile, true);
+		BufferedWriter bufferedWriter = new BufferedWriter(fileWriter);
+
 		for (String record : FileReadUtils.readFile(vcfFile, true))
 		{
 			String[] recordSplit = record.split("\t", -1);
@@ -66,16 +62,18 @@ public class MergeVCFwithCADD
 			// score
 			if (mergedVcfAndCadd.keySet().contains(recordSplit[15] + "_" + recordSplit[16]))
 			{
-				pw.println(record + "\t" + mergedVcfAndCadd.get(recordSplit[15] + "_" + recordSplit[16]));
+				bufferedWriter.append(record + "\t" + mergedVcfAndCadd.get(recordSplit[15] + "_" + recordSplit[16])
+						+ "\n");
 			}
 		}
+		bufferedWriter.close();
 	}
 
 	public static void main(String[] args) throws Exception
 	{
 		MergeVCFwithCADD mergeVCFwithCADD = new MergeVCFwithCADD();
 		mergeVCFwithCADD.parseCommandLineArgs(args);
-		mergeVCFwithCADD.run();
+		mergeVCFwithCADD.readAndProcessFile();
 	}
 
 	public void parseCommandLineArgs(String[] args) throws Exception
@@ -92,10 +90,10 @@ public class MergeVCFwithCADD
 			throw new Exception("Input CADD file does not exist or directory: " + caddFile.getAbsolutePath());
 		}
 
-		output_mergeVCFwithCADD = new File(args[2]);
-		if (!output_mergeVCFwithCADD.isFile())
+		outputFile = new File(args[2]);
+		if (!outputFile.isFile())
 		{
-			throw new Exception("Output file does not exist or directory: " + output_mergeVCFwithCADD.getAbsolutePath());
+			throw new Exception("Output file does not exist or directory: " + outputFile.getAbsolutePath());
 		}
 	}
 }
