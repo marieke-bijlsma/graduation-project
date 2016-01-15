@@ -25,7 +25,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class ClinicalFilters
 {
-	private static final String CANDIDATE_GENE_GROUP = "avm";
+	private static final String CANDIDATE_GENE_GROUP = "avm"; //aortic valve malformation
 
 	private File vcfFile;
 	private File patientGroups;

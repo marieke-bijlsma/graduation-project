@@ -13,13 +13,13 @@ import org.molgenis.data.vcf.VcfRepository;
  * 
  * @author mbijlsma
  */
-public class ReadVCFlines
+public class ReadVcfLines
 {
 	/**
-	 * Reads the given file per line and prints the requested information.
+	 * Reads the given file per line and prints the requested information, in this case the sample IDs.
 	 * 
 	 * @throws IOException
-	 *             when input file is not correct
+	 *             when input file is incorrect
 	 */
 	private static void readFile() throws IOException
 	{
@@ -34,27 +34,22 @@ public class ReadVCFlines
 		{
 			count++;
 			Entity record = vcf.next();
-
-			System.out.println(record);
-			// System.out.println(record.getString("ALT"));
-			// System.out.println(record.get("GT").toString());
-			// System.out.println(record.getEntity("SAMPLES_ENTITIES").getString("ORIGINAL_NAME"));
+			System.out.println(record.getEntity("SAMPLES_ENTITIES").getString("ORIGINAL_NAME"));
 
 			if (count == 100) // only read the first 100 lines of the VCF file
 			{
 				break;
 			}
-
 		}
-
 	}
 
 	/**
 	 * The main method, invokes readFile().
 	 * 
 	 * @param args
+	 *            the command line args
 	 * @throws IOException
-	 *             when input file is not correct
+	 *             when input file is incorrect
 	 */
 	public static void main(String[] args) throws IOException
 	{

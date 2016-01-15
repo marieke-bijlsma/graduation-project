@@ -7,7 +7,13 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 
-public class CompareFHDwithCandidates
+/**
+ * This class compares genes involved in fetal heart development with the candidate genes for AVM and prints the result.
+ * 
+ * @author mbijlsma
+ *
+ */
+public class CompareFhdWithCandidates
 {
 	private File convertedIDsFile;
 	private File FHDFile;
@@ -84,12 +90,12 @@ public class CompareFHDwithCandidates
 
 	public static void main(String[] args) throws Exception
 	{
-		CompareFHDwithCandidates compareFHDwithCandidates = new CompareFHDwithCandidates();
-		compareFHDwithCandidates.parseCommandLineArgs(args);
+		CompareFhdWithCandidates compareFhdWithCandidates = new CompareFhdWithCandidates();
+		compareFhdWithCandidates.parseCommandLineArgs(args);
 		
-		HashMap<String, String> geneIdsAndSymbols = compareFHDwithCandidates.readConvertedFile();
-		HashMap<String, String> geneSymbolsAndExpression = compareFHDwithCandidates.readFHD(geneIdsAndSymbols);
-		compareFHDwithCandidates.compareFHDandCandidates(geneSymbolsAndExpression);
+		HashMap<String, String> geneIdsAndSymbols = compareFhdWithCandidates.readConvertedFile();
+		HashMap<String, String> geneSymbolsAndExpression = compareFhdWithCandidates.readFHD(geneIdsAndSymbols);
+		compareFhdWithCandidates.compareFHDandCandidates(geneSymbolsAndExpression);
 	}
 
 	public void parseCommandLineArgs(String[] args) throws Exception

@@ -11,7 +11,8 @@ import java.util.List;
 import org.molgenis.data.annotation.graduation.utils.FileReadUtils;
 
 /**
- * This class calculates the true positive rate of all replicate trios according to the transmission probability.
+ * This class reads a text file and calculates the true positive rate of all replicate trios according to the
+ * transmission probability.
  * 
  * @author mbijlsma
  */
@@ -21,19 +22,15 @@ public class CalculateThreshold
 			"/Users/molgenis/Documents/graduation_project/mendelianViolationFiles/mendelian_violation_Xadjusted_replicates.txt");
 
 	/**
-	 * Calculates the true positive rate according to the transmission probability and prints the result.
-	 * 
-	 * @param records
-	 *            {@link List} containing all lines of file
+	 * Reads the file and calculates the true positive rate according to the transmission probability and prints the
+	 * result.
+	 *
 	 * @throws FileNotFoundException
-	 *             when file is not found
+	 *             when file does not exists
 	 */
 	private void calculateTransmissionProbability() throws FileNotFoundException
 	{
-		List<String> records = FileReadUtils.readFile(mendelianViolationFileLocation, true);
-
-		// Map to keep track of chromosome - position combinations so we can quickly scan the file for duplicate
-		// genotypes from samples with different family identifiers
+		List<String> records = FileReadUtils.readFile(mendelianViolationFileLocation, true); // true: skip header
 		HashMap<String, List<String>> recordMap = newHashMap();
 
 		int maxMendelianViolationTransmissionProbability = 127;
@@ -77,8 +74,7 @@ public class CalculateThreshold
 				}
 			}
 
-			// Skip 0 values because dividing 0 by 0 gives NaN values
-			if (total != 0 && pairs != 0)
+			if (total != 0 && pairs != 0) // Skip '0' values, because dividing 0 by 0 gives NaN values
 			{
 				System.out.println("for tp = " + transmissionProbability + " we find " + total + " of which " + pairs
 						+ " pairs (perc TP:" + ((double) pairs) / (double) total * 100.0 + ")");
@@ -87,11 +83,12 @@ public class CalculateThreshold
 	}
 
 	/**
-	 * The main method, calculateTransmissionProbability().
+	 * The main method, invokes calculateTransmissionProbability().
 	 * 
 	 * @param args
+	 *            the command line args
 	 * @throws FileNotFoundException
-	 *             when given file is not found
+	 *             when file does not exists
 	 */
 	public static void main(String[] args) throws FileNotFoundException
 	{
