@@ -41,7 +41,7 @@ import org.springframework.stereotype.Component;
  */
 
 @Component
-public class MergePBTwithVCF
+public class MergePbtWithVcf
 {
 	private File pbtFile;
 	private File vcfFile;
@@ -323,7 +323,7 @@ public class MergePBTwithVCF
 	public static void main(String[] args) throws Exception
 	{
 		AnnotationConfigApplicationContext context = AnnotatorUtils.registerCommandLineAnnotator();
-		MergePBTwithVCF mergePBTwithVCF = context.getBean(MergePBTwithVCF.class);
+		MergePbtWithVcf mergePBTwithVCF = context.getBean(MergePbtWithVcf.class);
 
 		mergePBTwithVCF.parseCommandLineArgs(args);
 

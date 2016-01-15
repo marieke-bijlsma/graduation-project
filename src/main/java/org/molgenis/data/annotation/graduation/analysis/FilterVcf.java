@@ -9,6 +9,7 @@ import static org.molgenis.data.vcf.utils.VcfUtils.convertToVCF;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
+import java.util.Arrays;
 
 import org.molgenis.data.Entity;
 import org.molgenis.data.annotation.entity.impl.SnpEffAnnotator.Impact;
@@ -19,7 +20,7 @@ import org.molgenis.data.vcf.VcfRepository;
  * 
  * @author mbijlsma
  */
-public class FilterVCF
+public class FilterVcf
 {
 	private File vcfFile;
 	private File outputFile;
@@ -97,6 +98,16 @@ public class FilterVCF
 		vcfRepository.close();
 	}
 
+	/**
+	 * Calculates if the allele frequencies of one of the annotators is below the threshold and return the result in the
+	 * form of a {@link Boolean}.
+	 * 
+	 * @param annotationFrequency
+	 *            the allele frequency of a specific annotator
+	 * @param index
+	 *            the index of the allele we are looking at
+	 * @return {@link Boolean} true if frequency is above threshold, otherwise false
+	 */
 	private boolean isFrequencyHigherThanThreshold(String[] annotationFrequency, int index)
 	{
 		double threshold = 0.05;
@@ -112,19 +123,19 @@ public class FilterVCF
 	}
 
 	/**
-	 * The main method. Invokes run().
+	 * The main method, invokes parseCommandLineArgs() and readAndFilterVcf().
 	 * 
 	 * @param args
 	 *            the command line arguments
 	 * @throws Exception
-	 *             when arguments are incorrect
+	 *             when one of the files is incorrect
 	 */
 	public static void main(String[] args) throws Exception
 	{
-		FilterVCF filterVCF = new FilterVCF();
+		FilterVcf filterVcf = new FilterVcf();
 
-		filterVCF.parseCommandLineArgs(args);
-		filterVCF.readAndFilterVcf();
+		filterVcf.parseCommandLineArgs(args);
+		filterVcf.readAndFilterVcf();
 	}
 
 	/**
@@ -133,7 +144,7 @@ public class FilterVCF
 	 * @param args
 	 *            the command line arguments
 	 * @throws Exception
-	 *             when file does not exists or length of arguments is incorrect
+	 *             when length of arguments is not 2, or if one of the files does not exists or is incorrect
 	 */
 	public void parseCommandLineArgs(String[] args) throws Exception
 	{
@@ -145,13 +156,13 @@ public class FilterVCF
 		vcfFile = new File(args[0]);
 		if (!vcfFile.isFile())
 		{
-			throw new Exception("VCF file does not exist or directory: " + vcfFile.getAbsolutePath());
+			throw new Exception("VCF file does not exist or is not a directory: " + vcfFile.getAbsolutePath());
 		}
 
 		outputFile = new File(args[1]);
 		if (!outputFile.isFile())
 		{
-			throw new Exception("Output file does not exist or directory: " + outputFile.getAbsolutePath());
+			throw new Exception("Output file does not exist or is not a directory: " + outputFile.getAbsolutePath());
 		}
 	}
 }

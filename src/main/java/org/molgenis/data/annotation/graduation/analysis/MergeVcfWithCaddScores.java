@@ -28,8 +28,7 @@ public class MergeVcfWithCaddScores
 	Map<String, String> mergedVcfAndCadd = newHashMap();
 
 	/**
-	 * Reads the file with CADD scores and adds them, together with the chromosome and position combination, to a
-	 * {@link Map}.
+	 * Reads the file with CADD scores and adds them, together with the chromosome and position combination, to a map.
 	 * 
 	 * @throws IOException
 	 *             when input or output file is incorrect

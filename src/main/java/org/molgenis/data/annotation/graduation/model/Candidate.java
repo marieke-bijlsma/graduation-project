@@ -2,6 +2,12 @@ package org.molgenis.data.annotation.graduation.model;
 
 import org.molgenis.data.annotation.entity.impl.SnpEffAnnotator.Impact;
 
+/**
+ * This class contains a Candidate Object.
+ * 
+ * @author mbijlsma
+ *
+ */
 public class Candidate
 {
 	public enum InheritanceMode

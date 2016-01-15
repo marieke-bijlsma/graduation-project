@@ -16,7 +16,7 @@ import org.molgenis.data.annotation.graduation.utils.FileReadUtils;
  * 
  * @author mbijlsma
  */
-public class CompareMVgenesWithGDIgenes
+public class CompareMvGenesWithGdiGenes
 {
 	private File gdiFile;
 
@@ -30,6 +30,7 @@ public class CompareMVgenesWithGDIgenes
 	 *            the Mendelian violation file to be parsed
 	 * @return mvGenes a list containing the genes from this file
 	 * @throws FileNotFoundException
+	 *             when file does not exists
 	 * 
 	 */
 	public List<String> readMVfile() throws FileNotFoundException
@@ -58,12 +59,13 @@ public class CompareMVgenesWithGDIgenes
 	{
 		List<String> gdiGenes = Lists.newArrayList();
 		List<String> records = FileReadUtils.readFile(gdiFile, false);
-		
-		for(String record : records) {
+
+		for (String record : records)
+		{
 			String[] recordSplit = record.split("\t", -1);
 			gdiGenes.add(recordSplit[0]); // gene column
 		}
-		
+
 		return gdiGenes;
 	}
 
@@ -105,20 +107,20 @@ public class CompareMVgenesWithGDIgenes
 	 */
 	public static void main(String[] args) throws Exception
 	{
-		CompareMVgenesWithGDIgenes compareGenes = new CompareMVgenesWithGDIgenes();
-		compareGenes.parseCommandLineArgs(args);
-		List<String> mvGenes = compareGenes.readMVfile();
-		List<String> gdiGenes = compareGenes.readGDIfile();
-		compareGenes.compare(mvGenes, gdiGenes);
+		CompareMvGenesWithGdiGenes compareMvGenesWithGdiGenes = new CompareMvGenesWithGdiGenes();
+		compareMvGenesWithGdiGenes.parseCommandLineArgs(args);
+		List<String> mvGenes = compareMvGenesWithGdiGenes.readMVfile();
+		List<String> gdiGenes = compareMvGenesWithGdiGenes.readGDIfile();
+		compareMvGenesWithGdiGenes.compare(mvGenes, gdiGenes);
 	}
 
 	/**
-	 * Parse command line arguments.
+	 * Parses command line arguments.
 	 * 
 	 * @param args
 	 *            the command line arguments
 	 * @throws Exception
-	 *             when file does not exist or when length of arguments is incorrect
+	 *             when length of arguments is not 2, or if one of the files does not exist or is incorrect
 	 */
 	public void parseCommandLineArgs(String[] args) throws Exception
 	{

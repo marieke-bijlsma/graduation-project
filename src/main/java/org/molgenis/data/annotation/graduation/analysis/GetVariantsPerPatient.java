@@ -34,7 +34,7 @@ public class GetVariantsPerPatient
 	 * @throws Exception
 	 *             if file does not exists or cannot be parsed
 	 */
-	public void readVCF() throws Exception
+	public void readVcf() throws Exception
 	{
 		Map<String, Integer> variantCountsPerPatient = newHashMap();
 		Map<String, List<Impact>> impactsPerPatient = newHashMap();
@@ -95,12 +95,13 @@ public class GetVariantsPerPatient
 	}
 
 	/**
+	 * Calculates the number of the four different impact per patient and return the result.
 	 * 
-	 * @param entry
-	 * @param patient
-	 * @param impact
-	 * @return
+	 * @param entry {@link Entry} containing {@link Impact}s
+	 * @param patient the patient we are currently looking at
+	 * @return allImpacts an array list containing all {@link Impact} counts
 	 */
+
 	private List<Integer> getImpactCountsPerPatient(String patient, Entry<String, List<Impact>> entry)
 	{
 		List<Integer> allImpacts = newArrayList();
@@ -148,7 +149,7 @@ public class GetVariantsPerPatient
 	 * Prints the number of several impacts per patient.
 	 * 
 	 * @param impactCountsPerPatient
-	 *            list containing impacts per patient
+	 *            list containing {@link Impact}acts per patient
 	 * @param variantCountsPerPatient
 	 *            list containing number of variants per patient
 	 */
@@ -174,7 +175,7 @@ public class GetVariantsPerPatient
 	}
 
 	/**
-	 * The main method.
+	 * The main method, invokes parseCommandLineArgs() and readVcf().
 	 * 
 	 * @param args
 	 *            the command line arguments
@@ -185,16 +186,16 @@ public class GetVariantsPerPatient
 	{
 		GetVariantsPerPatient getVariantsPerPatient = new GetVariantsPerPatient();
 		getVariantsPerPatient.parseCommandLineArgs(args);
-		getVariantsPerPatient.readVCF();
+		getVariantsPerPatient.readVcf();
 	}
 
 	/**
 	 * Parses the command line arguments.
 	 * 
 	 * @param args
-	 *            the command line arguments
+	 *            the command line args
 	 * @throws Exception
-	 *             when file does not exists or length of arguments is not right
+	 *             when length of arguments is not 1, or the file does not exists or is incorrect
 	 */
 	public void parseCommandLineArgs(String[] args) throws Exception
 	{

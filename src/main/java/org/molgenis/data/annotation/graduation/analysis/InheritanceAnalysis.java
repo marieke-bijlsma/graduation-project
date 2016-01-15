@@ -33,8 +33,14 @@ import org.molgenis.data.vcf.VcfRepository;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.stereotype.Component;
 
+/**
+ * This class performs an inheritance analysis and estimates to which inheritance mode each variant belongs to.
+ * 
+ * @author mbijlsma
+ *
+ */
 @Component
-public class InheritedAnalysis
+public class InheritanceAnalysis
 {
 	private File familyAndChildSamplesFile;
 	private File vcfFile;
@@ -42,7 +48,14 @@ public class InheritedAnalysis
 	private File matrixOutputFile;
 
 	boolean printIds = false; // used in analyzeGene
-	
+
+	/**
+	 * Reads and parses pedFile
+	 * 
+	 * @return trioList a list of {@link Trio}s
+	 * @throws IOException
+	 *             when familyAndChildSamplesFile is incorrect
+	 */
 	public List<Trio> readPedFile() throws IOException
 	{
 		Scanner scanner = new Scanner(familyAndChildSamplesFile);
@@ -74,6 +87,12 @@ public class InheritedAnalysis
 		return trioList;
 	}
 
+	/**
+	 * Reads and parses VCF file.
+	 * 
+	 * @throws Exception
+	 *             when VCF file is incorrect or does not exists
+	 */
 	public void readAndProcessVcfFile() throws Exception
 	{
 		List<Trio> trioList = readPedFile();
@@ -181,6 +200,7 @@ public class InheritedAnalysis
 	 * @param trioList
 	 *            a list of {@link Trio}s
 	 * @param gene
+	 *            the gene we are currently looking at
 	 * @throws Exception
 	 */
 	public void analyzeGene(List<Trio> trioList, String gene) throws Exception
@@ -314,6 +334,12 @@ public class InheritedAnalysis
 		printMatrix(geneFamilyCandidateCounts);
 	}
 
+	/**
+	 * 
+	 * 
+	 * @param candidate {@link Candidate}
+	 * @param variant 
+	 */
 	private void addInfomationToCandidate(Candidate candidate, Entity variant)
 	{
 		candidate.setChrom(variant.getString(VcfRepository.CHROM));
@@ -347,6 +373,14 @@ public class InheritedAnalysis
 		candidate.setCadd(variant.get("CADD_SCALED") == null ? "-" : variant.getString("CADD_SCALED"));
 	}
 
+	/**
+	 * 
+	 * 
+	 * @param gene the gene we are currently looking at
+	 * @param geneFamilyCandidateCounts
+	 * @param trio a list of {@link Trio}s
+	 * @throws IOException
+	 */
 	private void addTrioToMatrix(String gene, Map<String, List<String>> geneFamilyCandidateCounts, Trio trio)
 			throws IOException
 	{
@@ -401,7 +435,7 @@ public class InheritedAnalysis
 
 	private void printMatrix(Map<String, List<String>> geneFamilyCandidateCounts) throws IOException
 	{
-		
+
 		FileWriter fileWriter = new FileWriter(matrixOutputFile, true);
 		BufferedWriter bufferedWriter = new BufferedWriter(fileWriter);
 
@@ -443,9 +477,9 @@ public class InheritedAnalysis
 		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext("org.molgenis.data.annotation");
 		ctx.register(CommandLineAnnotatorConfig.class);
 
-		InheritedAnalysis inheritedAnalyses = ctx.getBean(InheritedAnalysis.class);
-		inheritedAnalyses.parseCommandLineArgs(args);
-		inheritedAnalyses.readAndProcessVcfFile();
+		InheritanceAnalysis inheritanceAnalysis = ctx.getBean(InheritanceAnalysis.class);
+		inheritanceAnalysis.parseCommandLineArgs(args);
+		inheritanceAnalysis.readAndProcessVcfFile();
 
 		ctx.close();
 	}

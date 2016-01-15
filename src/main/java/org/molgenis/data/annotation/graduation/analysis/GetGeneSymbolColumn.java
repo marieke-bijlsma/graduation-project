@@ -22,7 +22,7 @@ public class GetGeneSymbolColumn
 	/**
 	 * Reads a text file and returns all lines.
 	 * 
-	 * @return record {@link List} containing all lines of the file
+	 * @return record a list containing all lines of the file
 	 * @throws FileNotFoundException
 	 *             when text file does not exists
 	 */
@@ -35,7 +35,7 @@ public class GetGeneSymbolColumn
 	 * Parses gene symbol column from file and prints the genes with associated impacts.
 	 * 
 	 * @param record
-	 *            {@link List} containing all lines of the file
+	 *            a list containing all lines of the file
 	 * @throws IOException
 	 *             when input list is incorrect
 	 */

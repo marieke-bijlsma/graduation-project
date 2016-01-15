@@ -7,12 +7,25 @@ import static org.molgenis.data.annotation.graduation.utils.FileReadUtils.readFi
 import java.io.File;
 import java.util.Map;
 
+/**
+ * This class creates a candidate variant overview per patient.
+ * 
+ * @author mbijlsma
+ *
+ */
 public class GetOverviewPerPatient
 {
 	private File samplesFile;
 	private File vcfFile;
 	private File mvFile;
 
+	/**
+	 * Reads and parses samples file.
+	 * 
+	 * @return samplesWithSex a map containing the sample ID and the sex of the patient
+	 * @throws Exception
+	 *             when samplesFile is incorrect or does not exists
+	 */
 	private Map<String, String> readSamplesFile() throws Exception
 	{
 		Map<String, String> samplesWithSex = newHashMap();
@@ -24,6 +37,11 @@ public class GetOverviewPerPatient
 		return samplesWithSex;
 	}
 
+	/**
+	 * Reads and parses the Mendelian violation file.
+	 * 
+	 * @throws Exception when mvFile is incorrect or does not exists
+	 */
 	private void readMvFile() throws Exception
 	{
 		Map<String, String> samplesWithSex = readSamplesFile();
@@ -65,6 +83,12 @@ public class GetOverviewPerPatient
 		}
 	}
 
+	/**
+	 * 
+	 * 
+	 * @param multiAnnotationField
+	 * @return stringBuilder
+	 */
 	private StringBuilder buildAnnotationString(String[] multiAnnotationField)
 	{
 		StringBuilder stringBuilder = new StringBuilder();
@@ -150,19 +174,19 @@ public class GetOverviewPerPatient
 		vcfFile = new File(args[0]);
 		if (!vcfFile.isFile())
 		{
-			throw new Exception("VCF file does not exist or directory: " + vcfFile.getAbsolutePath());
+			throw new Exception("VCF file does not exist or is not a directory: " + vcfFile.getAbsolutePath());
 		}
 
 		mvFile = new File(args[1]);
 		if (!mvFile.isFile())
 		{
-			throw new Exception("Mendelian violations file does not exist or directory: " + mvFile.getAbsolutePath());
+			throw new Exception("Mendelian violations file does not exist or is not a directory: " + mvFile.getAbsolutePath());
 		}
 
 		samplesFile = new File(args[2]);
 		if (!samplesFile.isFile())
 		{
-			throw new Exception("Samples file does not exist or directory: " + samplesFile.getAbsolutePath());
+			throw new Exception("Samples file does not exist or is not a directory: " + samplesFile.getAbsolutePath());
 		}
 	}
 
