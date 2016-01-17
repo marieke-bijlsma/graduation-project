@@ -9,14 +9,13 @@ import static org.molgenis.data.vcf.utils.VcfUtils.convertToVCF;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
-import java.util.Arrays;
 
 import org.molgenis.data.Entity;
 import org.molgenis.data.annotation.entity.impl.SnpEffAnnotator.Impact;
 import org.molgenis.data.vcf.VcfRepository;
 
 /**
- * This class filters a VCF file to receive a smaller VCF file which can be analyzed further.
+ * This class filters a VCF file to receive a smaller VCF file that can be further analyzed.
  * 
  * @author mbijlsma
  */
@@ -26,10 +25,10 @@ public class FilterVcf
 	private File outputFile;
 
 	/**
-	 * Filters the VCF file according to soe specified thresholds.
+	 * Reads and filters the VCF file according to some specific thresholds.
 	 * 
 	 * @throws Exception
-	 *             when printwriter or itarator cannot perfom correctly
+	 *             when outputFile or vcfFile is incorrect or does not exist
 	 */
 	public void readAndFilterVcf() throws Exception
 	{
@@ -53,9 +52,8 @@ public class FilterVcf
 			if (record.getString(VcfRepository.FILTER).equals("PASS"))
 			{
 				// if multiple alternate alleles, multiple AFs -> split AFs and analyze all
-				// ExAC is separated with comma, GoNL with pipe and 1000G aslo with comma
+				// ExAC and 1000G are separated with comma, GoNL with pipe
 
-				// get alt for iterating over alt alleles and get exac af, gonl af and 1000G af
 				String alternateAlleles = record.getString(VcfRepository.ALT);
 				String[] exacAlleleFrequencies = record.get("EXAC_AF") == null ? null : record.getString("EXAC_AF")
 						.split(",", -1);
@@ -69,6 +67,7 @@ public class FilterVcf
 				// iterate over alternate alleles
 				for (int i = 0; i < alternateAlleles.split(",", -1).length; i++)
 				{
+					// skip variants with AF below threshold
 					if (isFrequencyHigherThanThreshold(exacAlleleFrequencies, i)
 							|| isFrequencyHigherThanThreshold(gonlAlleleFrequencies, i)
 							|| isFrequencyHigherThanThreshold(thousandGenomesAlleleFrequencies, i))
@@ -76,8 +75,7 @@ public class FilterVcf
 						continue;
 					}
 
-					// Get ANN field (or multiple ANN fields) and split it to get impact and filter LOW and MODIFIER
-					// Get only 2 ANN fields (for every allele), could be more than 2 ANN fields!!!
+					// skip variants with LOW or MODIFIER impact
 					String[] annSplit = multiAnnotationField[i].split("\\|", -1);
 					Impact impact = valueOf(annSplit[2]);
 					if (impact.equals(MODIFIER) || impact.equals(LOW))
@@ -88,7 +86,7 @@ public class FilterVcf
 					// convert to VCF entry and print to new file (true, all genotypes must be printed too)
 					bufferedWriter.append(convertToVCF(record, true));
 
-					// If we have a good variant for one of the alternate alleles, go to the next line in the VCF
+					// if we have a good variant for one of the alternate alleles, go to the next line in the VCF
 					break;
 				}
 			}
@@ -99,14 +97,14 @@ public class FilterVcf
 	}
 
 	/**
-	 * Calculates if the allele frequencies of one of the annotators is below the threshold and return the result in the
-	 * form of a {@link Boolean}.
+	 * Calculates if the allele frequencies of one of the annotators is below the threshold and returns the result in
+	 * the form of a boolean.
 	 * 
 	 * @param annotationFrequency
 	 *            the allele frequency of a specific annotator
 	 * @param index
-	 *            the index of the allele we are looking at
-	 * @return {@link Boolean} true if frequency is above threshold, otherwise false
+	 *            the index of the allele we are currently looking at
+	 * @return boolean true if frequency is above threshold, otherwise false
 	 */
 	private boolean isFrequencyHigherThanThreshold(String[] annotationFrequency, int index)
 	{
@@ -118,7 +116,6 @@ public class FilterVcf
 				return true;
 			}
 		}
-
 		return false;
 	}
 
@@ -126,9 +123,9 @@ public class FilterVcf
 	 * The main method, invokes parseCommandLineArgs() and readAndFilterVcf().
 	 * 
 	 * @param args
-	 *            the command line arguments
+	 *            the command line args
 	 * @throws Exception
-	 *             when one of the files is incorrect
+	 *             when one of the files is incorrect or does not exist
 	 */
 	public static void main(String[] args) throws Exception
 	{
@@ -142,9 +139,9 @@ public class FilterVcf
 	 * Parses the command line arguments.
 	 * 
 	 * @param args
-	 *            the command line arguments
+	 *            the command line args
 	 * @throws Exception
-	 *             when length of arguments is not 2, or if one of the files does not exists or is incorrect
+	 *             when length of arguments is not 2, or if one of the files does not exist or is incorrect
 	 */
 	public void parseCommandLineArgs(String[] args) throws Exception
 	{

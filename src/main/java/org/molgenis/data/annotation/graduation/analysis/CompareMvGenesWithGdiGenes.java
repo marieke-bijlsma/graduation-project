@@ -19,18 +19,15 @@ import org.molgenis.data.annotation.graduation.utils.FileReadUtils;
 public class CompareMvGenesWithGdiGenes
 {
 	private File gdiFile;
-
 	private File mendelianViolationFile = new File(
 			"/Users/molgenis/Documents/graduation_project/mendelianViolationFiles/mendelian_violation_Xadjusted_replicates.txt");
 
 	/**
-	 * Reads the Mendelian violation file and adds the gene column to a new ArrayList.
+	 * Reads the Mendelian violation file and adds the gene column to a new list.
 	 * 
-	 * @param mvFile
-	 *            the Mendelian violation file to be parsed
-	 * @return mvGenes a list containing the genes from this file
+	 * @return mendelianViolationGenes a list containing the gene column from this file
 	 * @throws FileNotFoundException
-	 *             when file does not exists
+	 *             when file does not exist
 	 * 
 	 */
 	public List<String> readMVfile() throws FileNotFoundException
@@ -40,20 +37,17 @@ public class CompareMvGenesWithGdiGenes
 		for (String record : FileReadUtils.readFile(mendelianViolationFile, true))
 		{
 			String[] lineSplit = record.split("\t", -1);
-			mendelianViolationGenes.add(lineSplit[0]); // gene column
+			mendelianViolationGenes.add(lineSplit[0]);
 		}
-
 		return mendelianViolationGenes;
 	}
 
 	/**
-	 * Reads the Gene Damage Index file and adds the gene column to a new ArrayList.
-	 * 
-	 * @param gdiFile
-	 *            the the Gene Damage Index file to be parsed
-	 * @return gdiGenes a list containing the genes from this file
+	 * Reads the Gene Damage Index file and adds the gene column to a new list.
+	 *
+	 * @return gdiGenes a list containing the gene column from this file
 	 * @throws IOException
-	 *             when file is not correct
+	 *             when gdiFile is incorrect
 	 */
 	public List<String> readGDIfile() throws IOException
 	{
@@ -65,7 +59,6 @@ public class CompareMvGenesWithGdiGenes
 			String[] recordSplit = record.split("\t", -1);
 			gdiGenes.add(recordSplit[0]); // gene column
 		}
-
 		return gdiGenes;
 	}
 
@@ -83,7 +76,7 @@ public class CompareMvGenesWithGdiGenes
 
 		for (String geneSymbol : mvGenes)
 		{
-			if (gdiGenes.contains(geneSymbol))
+			if (gdiGenes.contains(geneSymbol)) // if genes overlap
 			{
 				continue;
 			}
@@ -97,12 +90,12 @@ public class CompareMvGenesWithGdiGenes
 	}
 
 	/**
-	 * The main method, invokes readMVfile(), readGDIfile() and compare().
+	 * The main method, invokes parseCommandLineArgs(), readMVfile(), readGDIfile() and compare().
 	 * 
 	 * @param args
-	 *            the command line arguments
+	 *            the command line args
 	 * @throws Exception
-	 *             when file does not exists
+	 *             when one of the files is incorrect or does not exist
 	 * 
 	 */
 	public static void main(String[] args) throws Exception
@@ -115,10 +108,10 @@ public class CompareMvGenesWithGdiGenes
 	}
 
 	/**
-	 * Parses command line arguments.
+	 * Parses the command line arguments.
 	 * 
 	 * @param args
-	 *            the command line arguments
+	 *            the command line args
 	 * @throws Exception
 	 *             when length of arguments is not 2, or if one of the files does not exist or is incorrect
 	 */

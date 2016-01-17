@@ -106,7 +106,7 @@ public class MergeVcfWithCaddScores
 	 * @param args
 	 *            the command line args
 	 * @throws Exception
-	 *             when the length of the arguments is not 3 or if one of the files in incorrect or does not exists
+	 *             when the length of the arguments is not 3 or if one of the files in incorrect or does not exist
 	 */
 	public void parseCommandLineArgs(String[] args) throws Exception
 	{

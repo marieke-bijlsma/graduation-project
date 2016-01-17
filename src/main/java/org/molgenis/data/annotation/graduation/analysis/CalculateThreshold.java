@@ -26,7 +26,7 @@ public class CalculateThreshold
 	 * result.
 	 *
 	 * @throws FileNotFoundException
-	 *             when file does not exists
+	 *             when file does not exist
 	 */
 	private void calculateTransmissionProbability() throws FileNotFoundException
 	{
@@ -88,7 +88,7 @@ public class CalculateThreshold
 	 * @param args
 	 *            the command line args
 	 * @throws FileNotFoundException
-	 *             when file does not exists
+	 *             when file does not exist
 	 */
 	public static void main(String[] args) throws FileNotFoundException
 	{

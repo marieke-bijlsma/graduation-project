@@ -17,8 +17,8 @@ import java.util.Map.Entry;
 import org.molgenis.data.annotation.entity.impl.SnpEffAnnotator.Impact;
 
 /**
- * This class counts the number of several impacts per patient. The output is printed in matrix form for easy pasting in
- * Excel (for calculations and coloring). Also, the output can be printed with context (for clinicians).
+ * This class counts the number of several impacts per patient. The output is printed in the form of a matrix for easy
+ * pasting in Excel (for calculations and coloring). Also, the output can be printed with context (for clinicians).
  * 
  * @author mbijlsma
  */
@@ -27,12 +27,10 @@ public class GetVariantsPerPatient
 	private File vcfFile;
 
 	/**
-	 * Parses a VCF file and saves relevant information in HashMaps.
+	 * Parses a VCF file and saves relevant information in maps.
 	 * 
-	 * @param vcfFile
-	 *            the file to be parsed
 	 * @throws Exception
-	 *             if file does not exists or cannot be parsed
+	 *             when vcfFile is incorrect or does not exist
 	 */
 	public void readVcf() throws Exception
 	{
@@ -97,8 +95,10 @@ public class GetVariantsPerPatient
 	/**
 	 * Calculates the number of the four different impact per patient and return the result.
 	 * 
-	 * @param entry {@link Entry} containing {@link Impact}s
-	 * @param patient the patient we are currently looking at
+	 * @param entry
+	 *            {@link Entry} containing {@link Impact}s
+	 * @param patient
+	 *            the patient we are currently looking at
 	 * @return allImpacts an array list containing all {@link Impact} counts
 	 */
 

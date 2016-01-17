@@ -24,7 +24,7 @@ public class GetGeneSymbolColumn
 	 * 
 	 * @return record a list containing all lines of the file
 	 * @throws FileNotFoundException
-	 *             when text file does not exists
+	 *             when text file does not exist
 	 */
 	private List<String> getVcfRecords() throws FileNotFoundException
 	{

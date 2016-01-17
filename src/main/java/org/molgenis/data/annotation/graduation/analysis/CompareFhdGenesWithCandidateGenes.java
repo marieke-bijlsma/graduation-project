@@ -8,7 +8,8 @@ import java.util.HashMap;
 import java.util.List;
 
 /**
- * This class compares genes involved in fetal heart development with the candidate genes for AVM and prints the result.
+ * This class compares genes involved in fetal heart development with the candidate genes for aortic valve malformations
+ * and prints the result.
  * 
  * @author mbijlsma
  *
@@ -20,7 +21,7 @@ public class CompareFhdGenesWithCandidateGenes
 	private File candidatesFile;
 
 	/**
-	 * Reads the convertedIDsFile and add both IDs to a map.
+	 * Reads the convertedIDsFile and adds both Ensembl IDs and gene symbols to a map.
 	 * 
 	 * @return ensemblIdsAndGeneSymbols a map containing Ensembl IDs and gene symbols
 	 * @throws IOException
@@ -39,11 +40,11 @@ public class CompareFhdGenesWithCandidateGenes
 	}
 
 	/**
-	 * Reads the fhdFile and add gene symbol with associated expression to a map.
+	 * Reads the fhdFile and adds gene symbol with associated expression to a map.
 	 * 
 	 * @param geneIdsAndSymbols
 	 *            a map containing Ensembl IDs and gene symbols
-	 * @return geneSymbolsAndExpression a map containing gene symbols and expression
+	 * @return geneSymbolsAndExpression a map containing gene symbols and associated expression
 	 * @throws IOException
 	 *             when fhdFile is incorrect
 	 */
@@ -58,8 +59,8 @@ public class CompareFhdGenesWithCandidateGenes
 			String id = recordSplit[0];
 			String expression = recordSplit[1];
 
-			// if Ensembl ID of convertedIdsFile is the same as the Ensembl ID from fhdFile, add together with
-			// expression to map
+			// if Ensembl ID of convertedIdsFile is the same as the Ensembl ID from fhdFile, add gene symbol together
+			// with expression to a map
 			if (geneIdsAndSymbols.keySet().contains(id))
 			{
 				geneSymbolsAndExpression.put(geneIdsAndSymbols.get(id), expression);
@@ -69,7 +70,7 @@ public class CompareFhdGenesWithCandidateGenes
 	}
 
 	/**
-	 * Reads the candidatesFile and compares the gene symbols with the genes from FHD and prints result.
+	 * Reads the candidatesFile and compares the gene symbols with the gene symbols from FHD and prints result.
 	 * 
 	 * @param geneSymbolsAndExpression
 	 *            a map containing gene symbols and expression
@@ -86,7 +87,7 @@ public class CompareFhdGenesWithCandidateGenes
 
 		for (String candidate : candidates)
 		{
-			// if gene symbol of convertedIdsFile is the same as the candidate gene, add to map
+			// if gene symbol of FhdFile is the same as the candidate gene, add to map
 			if (geneSymbolsAndExpression.keySet().toString().toUpperCase().contains(candidate.toUpperCase()))
 			{
 				countTotal++;
@@ -111,8 +112,6 @@ public class CompareFhdGenesWithCandidateGenes
 		System.out.println("total candidates found: " + countTotal);
 		System.out.println("total remaining candidates: " + countRemaining);
 		System.out.println("Number of candidates with expression above 0: " + countExpressionAboveZero);
-		// 192 - DAVID
-		// 202 - BioMart
 	}
 
 	/**
@@ -121,7 +120,7 @@ public class CompareFhdGenesWithCandidateGenes
 	 * @param args
 	 *            the command line args
 	 * @throws Exception
-	 *             when one of the files is incorrect or does not exists
+	 *             when one of the files is incorrect or does not exist
 	 */
 	public static void main(String[] args) throws Exception
 	{
@@ -134,7 +133,7 @@ public class CompareFhdGenesWithCandidateGenes
 	}
 
 	/**
-	 * Parses the command line args.
+	 * Parses the command line arguments.
 	 * 
 	 * @param args
 	 *            the command line args

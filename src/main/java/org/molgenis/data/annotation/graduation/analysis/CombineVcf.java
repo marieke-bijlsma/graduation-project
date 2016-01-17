@@ -92,7 +92,7 @@ public class CombineVcf
 	 * @param args
 	 *            the command line arguments
 	 * @throws Exception
-	 *             when the length of the arguments is not 2, or if one of the files is incorrect or does not exists
+	 *             when the length of the arguments is not 2, or if one of the files is incorrect or does not exist
 	 */
 	public void parseCommandLineArgs(String[] args) throws Exception
 	{

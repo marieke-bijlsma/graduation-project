@@ -10,8 +10,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * This class compares the family IDs from both the PED file as the PBT file, to get the right child IDs associated with
- * the family IDs and prints them. They can be used to add as a new column to the PBT file.
+ * This class compares the family IDs from both the PED file and the PBT file, to get the right family IDs and the
+ * associated the child IDs and prints them. They can be used to add as a new column to the PBT file.
  * 
  * @author mbijlsma
  */
@@ -21,22 +21,19 @@ public class GetChildSampleIds
 	private File pbtFile;
 
 	/**
-	 * Reads the PED file and adds the family ID and child ID to a new HashMap.
+	 * Reads the PED file and adds the family ID and child ID to a new map.
 	 * 
-	 * @param pedFile
-	 *            the PED file to be parsed
-	 * @return pedFamilyAndChildId a HashMap containing the family IDs and associated child IDs
+	 * @return pedFamilyAndChildIds a HashMap containing the family IDs and associated child IDs
 	 * @throws IOException
-	 *             when the input file is not correct
+	 *             when the pedFile is incorrect
 	 */
 	public Map<String, String> readPed() throws IOException
 	{
 		Map<String, String> pedFamilyAndChildIds = newHashMap();
-		for (String record : readFile(pedFile, false))
+		for (String record : readFile(pedFile, false)) // false: no header
 		{
-
 			String[] recordSplit = record.split("\t", -1);
-			pedFamilyAndChildIds.put(recordSplit[0], recordSplit[1]); // [family ID, child ID]
+			pedFamilyAndChildIds.put(recordSplit[0], recordSplit[1]);
 		}
 		return pedFamilyAndChildIds;
 	}
@@ -44,11 +41,9 @@ public class GetChildSampleIds
 	/**
 	 * Reads the PBT file and adds the family ID to a new list.
 	 * 
-	 * @param pbtFile
-	 *            the PBT file to be parsed
-	 * @return pbtFamilyId a list containing the family IDs
+	 * @return pbtFamilyIds a list containing the family IDs
 	 * @throws IOException
-	 *             when input file is not correct
+	 *             when pbtFile is incorrect
 	 */
 	public List<String> getFamilyIdentifiersFromPbtFile() throws IOException
 	{
@@ -56,19 +51,16 @@ public class GetChildSampleIds
 		for (String record : readFile(pbtFile, false))
 		{
 			String[] recordSplit = record.split("\t", -1);
-			pbtFamilyIds.add(recordSplit[3]); // [family ID]
+			pbtFamilyIds.add(recordSplit[3]);
 		}
 		return pbtFamilyIds;
 	}
 
 	/**
-	 * Merges the right family ID with the right child ID and prints both tab separated.
+	 * Merges the right family IDs with the right child IDs and prints both tab-separated.
 	 * 
-	 * @param pedFamilyAndChildIds
-	 *            a HashMap containing family and child IDs
-	 * @param pbtFamilyIds
-	 *            an ArrayList containing family IDs
 	 * @throws IOException
+	 *             when one of the files is incorrect
 	 */
 	public void mergeChildAndFamilyId() throws IOException
 	{
@@ -77,6 +69,7 @@ public class GetChildSampleIds
 
 		for (String pbtFamilyId : pbtFamilyIds)
 		{
+			// if family IDs match
 			if (pedFamilyAndChildIds.containsKey(pbtFamilyId))
 			{
 				String sampleIdentifier = pedFamilyAndChildIds.get(pbtFamilyId);
@@ -86,12 +79,12 @@ public class GetChildSampleIds
 	}
 
 	/**
-	 * The main method, invokes mergeChildAndFamilyId().
+	 * The main method, invokes parseCommandLineArgs() and mergeChildAndFamilyId().
 	 * 
 	 * @param args
-	 *            the command line arguments
+	 *            the command line args
 	 * @throws Exception
-	 *             when length of arguments is not 2 or when PED or PBT file does not exists.
+	 *             when length of arguments is not 2, or when PED or PBT file does not exist or is incorrect.
 	 */
 	public static void main(String[] args) throws Exception
 	{
@@ -101,6 +94,14 @@ public class GetChildSampleIds
 		getChildSampleIds.mergeChildAndFamilyId();
 	}
 
+	/**
+	 * Parses the command line arguments
+	 * 
+	 * @param args
+	 *            the command line args
+	 * @throws Exception
+	 *             when the length of the arguments is not 2, or if one of the files if incorrect or does not exist
+	 */
 	public void parseCommandLineArgs(String[] args) throws Exception
 	{
 		if (!(args.length == 2))
