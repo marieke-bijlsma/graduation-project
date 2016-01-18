@@ -128,9 +128,18 @@ public class MergeVcfWithCaddScores
 		}
 
 		outputFile = new File(args[2]);
-		if (!outputFile.isFile())
+		if (!outputFile.exists())
+		{
+			outputFile.createNewFile();
+		}
+		else if (!outputFile.isFile())
 		{
 			throw new Exception("Output file does not exist or is not a directory: " + outputFile.getAbsolutePath());
+		}
+		else
+		{
+			outputFile.delete();
+			outputFile.createNewFile();
 		}
 	}
 }

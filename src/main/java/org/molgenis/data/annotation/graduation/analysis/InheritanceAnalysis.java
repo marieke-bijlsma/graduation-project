@@ -29,15 +29,16 @@ import org.molgenis.data.annotation.entity.impl.SnpEffAnnotator.Impact;
 import org.molgenis.data.annotation.graduation.model.Candidate;
 import org.molgenis.data.annotation.graduation.model.Trio;
 import org.molgenis.data.annotation.graduation.model.Candidate.InheritanceMode;
+import org.molgenis.data.annotation.graduation.model.Variant;
 import org.molgenis.data.vcf.VcfRepository;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.stereotype.Component;
 
 /**
- * This class performs an inheritance analysis and estimates to which inheritance mode each variant belongs to.
+ * This class performs an inheritance analysis and estimates to which inheritance mode each variant belongs to. Patient
+ * overviews and a matrix are printed.
  * 
  * @author mbijlsma
- *
  */
 @Component
 public class InheritanceAnalysis
@@ -50,7 +51,7 @@ public class InheritanceAnalysis
 	boolean printIds = false; // used in analyzeGene
 
 	/**
-	 * Reads and parses pedFile
+	 * Reads and parses a PED file and adds family ID, child ID, father ID, and mother ID to a {@link Trio} list
 	 * 
 	 * @return trioList a list of {@link Trio}s
 	 * @throws IOException
@@ -72,14 +73,13 @@ public class InheritanceAnalysis
 			String father = lineSplit[2];
 			String mother = lineSplit[3];
 
-			// if one of the trio got no info, skip
+			// if one of the members of the trio is missing
 			if (child.equals("0") || father.equals("0") || mother.equals("0"))
 			{
 				continue;
 			}
 			else
 			{
-				// add trios to list
 				trioList.add(new Trio(family, child, father, mother));
 			}
 		}
@@ -88,7 +88,7 @@ public class InheritanceAnalysis
 	}
 
 	/**
-	 * Reads and parses VCF file.
+	 * Reads and parses a VCF file.
 	 * 
 	 * @throws Exception
 	 *             when VCF file is incorrect or does not exists
@@ -135,6 +135,13 @@ public class InheritanceAnalysis
 		}
 	}
 
+	/**
+	 * Gets genes from annotation field of VCF and adds them to a list.
+	 * 
+	 * @param multiAnn
+	 *            multi-annotation field
+	 * @return genesSeenForNextVariant a list containing the genes from this annotation field(s)
+	 */
 	private Set<String> getGenesFromAnnField(String[] multiAnn)
 	{
 		// get ann field (genes), in hashset to get unique ones
@@ -150,6 +157,16 @@ public class InheritanceAnalysis
 		return genesSeenForNextVariant;
 	}
 
+	/**
+	 * Adds all variants to the {@link Trio}s.
+	 * 
+	 * @param trioList
+	 *            a list of {@link Trio}s
+	 * @param record
+	 *            {@link Entity} a line from the VCF file
+	 * @param gene
+	 *            the gene we are currently looking at
+	 */
 	private void addAllVariantsToTrio(List<Trio> trioList, Entity record, String gene)
 	{
 		// For every trio, add all variants to map and use gene as key
@@ -159,6 +176,16 @@ public class InheritanceAnalysis
 		}
 	}
 
+	/**
+	 * For every gene, add the right samples to the right member of the {@link Trio}s.
+	 * 
+	 * @param sampleEntities
+	 *            {@link Iterable} containing all sample {@link Entity}
+	 * @param trioList
+	 *            a list of {@link Trio}s
+	 * @param gene
+	 *            the gene we are currently looking at
+	 */
 	private void addSamplesToTrioForGene(Iterable<Entity> sampleEntities, List<Trio> trioList, String gene)
 	{
 		// For every sample in VCF, add all samples to right members of trio and use gene as key
@@ -196,12 +223,14 @@ public class InheritanceAnalysis
 	}
 
 	/**
+	 * Analyzes gene and estimates which inheritance mode complies to a {@link Trio}.
 	 * 
 	 * @param trioList
 	 *            a list of {@link Trio}s
 	 * @param gene
 	 *            the gene we are currently looking at
 	 * @throws Exception
+	 *             when pedFile or vcfFile is incorrect or does not exist
 	 */
 	public void analyzeGene(List<Trio> trioList, String gene) throws Exception
 	{
@@ -209,15 +238,13 @@ public class InheritanceAnalysis
 		// Used for creating matrix
 		Map<String, List<String>> geneFamilyCandidateCounts = newHashMap();
 
-		// look for homozygous in child && heterozygous in parents
-
 		for (Trio trio : trioList)
 		{
 			// for every trio, set counts on null
 			int childAndFatherHet = 0;
 			int childAndMotherHet = 0;
 
-			// temporary list. If comp het, go to addCandidates function. Otherwise, empty list (next trio)
+			// temporary list. If compound heterozygous, go to addCandidates function. Otherwise, empty list (next trio)
 			List<Candidate> temporaryCandidates = newArrayList();
 
 			Map<String, List<Entity>> variants = trio.getVariants();
@@ -228,7 +255,6 @@ public class InheritanceAnalysis
 			int variantIndex = 0;
 			for (Entity variant : variants.get(gene))
 			{
-
 				String FORMAT_DP = "DP";
 
 				Entity sampleChild = childSamples.get(gene).get(variantIndex);
@@ -249,10 +275,12 @@ public class InheritanceAnalysis
 				String altAlleles = variant.getString(VcfRepository.ALT);
 				String[] altsplit = altAlleles.split(",", -1);
 
+				// iterate over alternate alleles
 				for (int i = 0; i < altsplit.length; i++)
 				{
 					Impact impact = getImpactForGeneAlleleCombo(variant.getString("ANN").split(",", -1));
 
+					// if impact is not HIGH or MODERATE
 					if (impact.equals(Impact.MODIFIER) || impact.equals(Impact.LOW))
 					{
 						continue;
@@ -260,7 +288,7 @@ public class InheritanceAnalysis
 
 					InheritanceMode inheritanceMode = null;
 
-					// because alt index = 0 for the first alt add 1
+					// because alt index = 0, add 1 (alternate alleles)
 					int altIndex = i + 1;
 
 					updateHomozygousAndHeterozygousValues(altIndex);
@@ -308,13 +336,12 @@ public class InheritanceAnalysis
 				variantIndex++;
 			}
 
-			// Only if comp het found, send temporary list to addCandidates
+			// Only if compound heterozygous found, send temporary list to addCandidates
 			// if both parents are at least heterozygous for one variant (not the same one) and child is
 			// heterozygous for both variants on this gene
 
 			if ((childAndFatherHet >= 1) && (childAndMotherHet >= 1))
 			{
-				// TODO: Use addAll -> for every gene add all candidates at once
 				for (Candidate candidate : temporaryCandidates)
 				{
 					trio.addCandidate(gene, candidate);
@@ -323,22 +350,22 @@ public class InheritanceAnalysis
 
 			addTrioToMatrix(gene, geneFamilyCandidateCounts, trio);
 
-			// then remove data for this gene
-			// delete from trio: samples & variants
+			// for this gene: delete samples & variants from trio
 			trio.getVariants().remove(gene);
 			trio.getSamplesChild().remove(gene);
 			trio.getSamplesFather().remove(gene);
 			trio.getSamplesMother().remove(gene);
 		}
-
 		printMatrix(geneFamilyCandidateCounts);
 	}
 
 	/**
+	 * Sets all parameters for the {@link Candidate} Object.
 	 * 
-	 * 
-	 * @param candidate {@link Candidate}
-	 * @param variant 
+	 * @param candidate
+	 *            {@link Candidate} the candidate variant we are currently looking at
+	 * @param variant
+	 *            {@link Variant} the variant we are currently looking at
 	 */
 	private void addInfomationToCandidate(Candidate candidate, Entity variant)
 	{
@@ -374,12 +401,16 @@ public class InheritanceAnalysis
 	}
 
 	/**
+	 * Adds variant counts per trio and gene to a matrix.
 	 * 
-	 * 
-	 * @param gene the gene we are currently looking at
+	 * @param gene
+	 *            the gene we are currently looking at
 	 * @param geneFamilyCandidateCounts
-	 * @param trio a list of {@link Trio}s
+	 *            list containing the number of variant candidates per gene
+	 * @param trio
+	 *            a list of {@link Trio}s
 	 * @throws IOException
+	 *             when candidateOutputFile is incorrect
 	 */
 	private void addTrioToMatrix(String gene, Map<String, List<String>> geneFamilyCandidateCounts, Trio trio)
 			throws IOException
@@ -391,6 +422,8 @@ public class InheritanceAnalysis
 			printCandidates(trio.getCandidatesForChildperGene().get(gene), trio, gene);
 		}
 
+		// if geneFamilyCandidateCounts does not contain gene, add gene together with family ID and size list to map,
+		// otherwise get gene and add family ID and size list to map.
 		if (!geneFamilyCandidateCounts.containsKey(gene))
 		{
 			List<String> familyList = newArrayList();
@@ -403,7 +436,13 @@ public class InheritanceAnalysis
 		}
 	}
 
-	// Get impacts for gene and allele
+	/**
+	 * Estimates the impact for each gene and allele and returns this {@link Impact}.
+	 * 
+	 * @param multiAnn
+	 *            string array containing multi-annotation field
+	 * @return impact the {@link Impact}
+	 */
 	private Impact getImpactForGeneAlleleCombo(String[] multiAnn)
 	{
 		Impact impact = null;
@@ -416,6 +455,18 @@ public class InheritanceAnalysis
 		return impact;
 	}
 
+	/**
+	 * Writes the {@link Candidate} Objects to a new file.
+	 * 
+	 * @param candidates
+	 *            the {@link Candidate} we are currently looking at
+	 * @param trio
+	 *            a list of {@link Trio}s
+	 * @param gene
+	 *            the gene we are currently looking at
+	 * @throws IOException
+	 *             when candidateOutputFile is incorrect
+	 */
 	private void printCandidates(List<Candidate> candidates, Trio trio, String gene) throws IOException
 	{
 		FileWriter fileWriter = new FileWriter(candidateOutputFile, true);
@@ -424,7 +475,6 @@ public class InheritanceAnalysis
 		bufferedWriter.append("Family id: " + trio.getFamily_id() + "\n" + "Gene: " + gene + "\n"
 				+ "Number of candidates: " + trio.getCandidatesForChildperGene().get(gene).size() + "\n");
 
-		// impacts can be added to Candidate object (cDNA/impact/effect/CADD/ExAC/1000G/GoNL)
 		for (Candidate candidate : candidates)
 		{
 			bufferedWriter.append("\n" + candidate + "\n");
@@ -433,6 +483,14 @@ public class InheritanceAnalysis
 		bufferedWriter.close();
 	}
 
+	/**
+	 * Prints the matrix containing candidate variant counts per gene per {@link Trio}.
+	 * 
+	 * @param geneFamilyCandidateCounts
+	 *            list containing the number of variant candidates per gene
+	 * @throws IOException
+	 *             when matrixOutputFile is incorrect
+	 */
 	private void printMatrix(Map<String, List<String>> geneFamilyCandidateCounts) throws IOException
 	{
 
@@ -454,7 +512,7 @@ public class InheritanceAnalysis
 				counts.add(count + "\t");
 
 			}
-			// print fam_ids once!
+			// print family IDs once!
 			if (printIds == false)
 			{
 				// remove brackets and commas
@@ -471,6 +529,14 @@ public class InheritanceAnalysis
 		bufferedWriter.close();
 	}
 
+	/**
+	 * The main method, invokes parseCommandLineArgs() and readAndProcessVcfFile().
+	 * 
+	 * @param args
+	 *            the command line args
+	 * @throws Exception
+	 *             when bean cannot be created or if vcfFile is incorrect or does not exist
+	 */
 	public static void main(String[] args) throws Exception
 	{
 		// context to get Spring working
@@ -484,6 +550,14 @@ public class InheritanceAnalysis
 		ctx.close();
 	}
 
+	/**
+	 * Parses the command line arguments.
+	 * 
+	 * @param args
+	 *            the command line args
+	 * @throws Exception
+	 *             when length of arguments is not 4, or if one of the files is incorrect or does not exist
+	 */
 	private void parseCommandLineArgs(String[] args) throws Exception
 	{
 		if (!(args.length == 4))

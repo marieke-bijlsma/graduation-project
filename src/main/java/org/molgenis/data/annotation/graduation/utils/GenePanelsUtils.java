@@ -3,8 +3,10 @@ package org.molgenis.data.annotation.graduation.utils;
 import java.util.Arrays;
 import java.util.List;
 
+import org.molgenis.data.annotation.graduation.analysis.MergePbtWithVcf;
+
 /**
- * This class contains multiple gene lists that are invoked by the MergePBTwithVCF class.
+ * This class provides multiple gene list utilities that are invoked by the {@link MergePbtWithVcf} class.
  * 
  * @author mbijlsma
  */

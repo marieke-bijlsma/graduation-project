@@ -5,7 +5,7 @@ import static org.molgenis.data.annotation.entity.impl.SnpEffAnnotator.Impact.va
 import org.molgenis.data.annotation.entity.impl.SnpEffAnnotator.Impact;
 
 /**
- * Class to store often used vcf record information
+ * This class stores information used to create a Variant Object.
  * 
  * @author mbijlsma
  *
@@ -19,6 +19,14 @@ public class Variant
 
 	String[] multiAnnotationField;
 
+	/**
+	 * This is the constructor and is invoked to create a Variant Object.
+	 * 
+	 * @param chromosome the chromosome
+	 * @param position the position
+	 * @param referenceAllele the reference allele
+	 * @param alternateAlleles string array containing the alternate alleles
+	 */
 	public Variant(String chromosome, String position, String referenceAllele, String[] alternateAlleles)
 	{
 		this.chromosome = chromosome;

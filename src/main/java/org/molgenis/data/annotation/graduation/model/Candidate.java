@@ -3,7 +3,7 @@ package org.molgenis.data.annotation.graduation.model;
 import org.molgenis.data.annotation.entity.impl.SnpEffAnnotator.Impact;
 
 /**
- * This class contains a Candidate Object.
+ * This class stores information used to create a Candidate Object.
  * 
  * @author mbijlsma
  *
@@ -12,19 +12,10 @@ public class Candidate
 {
 	public enum InheritanceMode
 	{
-		COMPOUND_HET, // its.. complicated :)
-		MULTIGENIC, // DON'T DO - like compound but over 2+ genes... VERY tricky, don't do
-
-		HETEROZYGOUS, // DON'T DO - e.g. parent 0/1 + 0/0 = child 0/1 -> pathogenic due to low-penetrance
-		HOMOZYGOUS, // parents 0/1 + 0/1 = child 1/1
-
-		DENOVO_HET, // parents 0/0 + 0/0 = child 0/1
-		DENOVO_HOM // parent e.g. 0/1 + 0/0, child 1/1
+		COMPOUND_HET, HOMOZYGOUS, DENOVO_HET, DENOVO_HOM
 	}
 
 	private InheritanceMode inheritanceMode;
-
-	// select only the variants that apply to this particular candidate
 	private String chromosome;
 	private String pos;
 	private String altAlleles;
@@ -42,8 +33,26 @@ public class Candidate
 	private String fatherGenotype;
 	private String motherGenotype;
 
-	public Candidate(InheritanceMode inheritanceMode, String childGenotype, String fatherGenotype, String motherGenotype, String altAlleles,
-			String affectedAllele, Impact impact)
+	/**
+	 * This is the constructor and is invoked to create a Candidate Object.
+	 * 
+	 * @param inheritanceMode
+	 *            the mode of inheritance
+	 * @param childGenotype
+	 *            the child genotype
+	 * @param fatherGenotype
+	 *            the father genotype
+	 * @param motherGenotype
+	 *            the mother genotype
+	 * @param altAlleles
+	 *            the alternate alleles
+	 * @param affectedAllele
+	 *            the allele that is affected
+	 * @param impact
+	 *            the {@link Impact} of the variant
+	 */
+	public Candidate(InheritanceMode inheritanceMode, String childGenotype, String fatherGenotype,
+			String motherGenotype, String altAlleles, String affectedAllele, Impact impact)
 	{
 		this.inheritanceMode = inheritanceMode;
 		this.childGenotype = childGenotype;
@@ -57,8 +66,8 @@ public class Candidate
 	@Override
 	public String toString()
 	{
-		return "Inheritance mode: " + inheritanceMode + "\n" + "Chromosome and position: " + chromosome + ":" + pos + "\n"
-				+ "Alt allele(s): " + altAlleles + "\n" + "Affected allele: " + affectedAllele + "\n"
+		return "Inheritance mode: " + inheritanceMode + "\n" + "Chromosome and position: " + chromosome + ":" + pos
+				+ "\n" + "Alt allele(s): " + altAlleles + "\n" + "Affected allele: " + affectedAllele + "\n"
 				+ "Child, father, mother genotypes: " + childGenotype + ", " + fatherGenotype + ", " + motherGenotype
 				+ "\n" + "Impact: " + impact + " (" + effect + ", " + cDNA + ") " + "\n" + "ExAC AF: " + exac_af_STR
 				+ ", ExAC HOM: " + exac_ac_hom_STR + ", ExAC HET: " + exac_ac_het_STR + "\n" + "GoNL: " + gonl_af_STR

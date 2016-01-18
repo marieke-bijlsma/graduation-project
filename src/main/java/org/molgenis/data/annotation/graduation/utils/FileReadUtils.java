@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Scanner;
 
 /**
- * Class that provides utilities to read files.
+ * This class provides utilities for the reading of files.
  * 
  * @author mbijlsma
  *
@@ -16,11 +16,15 @@ import java.util.Scanner;
 public class FileReadUtils
 {
 	/**
-	 * Read file and add lines to {@link List}.
+	 * Reads a file and adds lines to a list.
 	 * 
+	 * @param file
+	 *            the file to be read
+	 * @param skipHeader
+	 *            boolean, true if header must be skipped, otherwise false
+	 * @return records list containing all lines of the file
 	 * @throws FileNotFoundException
-	 *             when file not found
-	 * @return records {@link List} containing all lines of the mendelian violation file
+	 *             when file does not exist
 	 */
 	public static List<String> readFile(File file, boolean skipHeader) throws FileNotFoundException
 	{
@@ -29,7 +33,7 @@ public class FileReadUtils
 		Scanner scanner = new Scanner(file);
 		String record = null;
 
-		if (skipHeader) scanner.nextLine(); // skip header
+		if (skipHeader) scanner.nextLine();
 
 		while (scanner.hasNextLine())
 		{
@@ -39,12 +43,15 @@ public class FileReadUtils
 		scanner.close();
 		return records;
 	}
-	
+
 	/**
+	 * Gets the annotation field from a file.
 	 * 
 	 * @param record
+	 *            one line from a file
 	 * @param index
-	 * @return
+	 *            the index of column to be parsed
+	 * @return annField the parsed annotation field
 	 */
 	public static String getAnnotationField(String record, int index)
 	{

@@ -22,16 +22,23 @@ import org.molgenis.data.vcf.VcfRepository;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.stereotype.Component;
 
+/**
+ * This class filters a VCF file according to multiple clinical filters and prints the remaining variants with
+ * associated information.
+ * 
+ * @author mbijlsma
+ */
 @Component
 public class ClinicalFilters
 {
-	private static final String CANDIDATE_GENE_GROUP = "avm"; //aortic valve malformation
+	private static final String CANDIDATE_GENE_GROUP = "avm"; // aortic valve malformation
 
 	private File vcfFile;
 	private File patientGroups;
 	private Map<String, String> samplePatientGroupMap = newHashMap();
 	private String gtcMessage = null;
 
+	// genes involved in AVM
 	private ArrayList<String> avmGenes = newArrayList(Arrays.asList(new String[]
 	{ "NELFB", "PRKAG2", "JPH2", "MFAP4", "RP5-1086D14.6", "TAZ", "PRIM1", "IRX4", "IRAK1", "SNIP1 ", "B3GALT6",
 			"WDR1", "GATA6", "GATA4", "GATA5", "LZTS2", "DDX42", "ZNF777", "CSRP3", "CHST3 ", "TCF19", "ACTA2",
@@ -80,22 +87,32 @@ public class ClinicalFilters
 			"PDIA4", "ORC1", "PTRF", "GNPTG ", "ACTN2", "BMP4", "ACTN4", "TAB2", "BBS2", "UNC45A", "ASXL1", "BRAF",
 			"MYOZ2", "MYOZ1", "TAB1", "MAP3K7", "TAK1" }));
 
+	/**
+	 * Reads and parses a patientGroups file and adds sample ID of the patient and candidate gene group to a map.
+	 * 
+	 * @throws FileNotFoundException
+	 *             when patientGroups does not exist
+	 */
 	private void readPatientGroups() throws FileNotFoundException
 	{
 		Scanner scanner = new Scanner(patientGroups);
 		String line = null;
 
-		// scanner.next(); // skip header
 		while (scanner.hasNextLine())
 		{
 			line = scanner.nextLine();
 			String[] lineSplit = line.split("\t", -1);
 			samplePatientGroupMap.put(lineSplit[0], lineSplit[1]);
 		}
-
 		scanner.close();
 	}
 
+	/**
+	 * Reads and parses a VCF file.
+	 * 
+	 * @throws Exception
+	 *             when VCF file is incorrect or does not exist
+	 */
 	private void readVcf() throws Exception
 	{
 		VcfRepository vcfRepository = new VcfRepository(vcfFile, "vcf");
@@ -108,13 +125,22 @@ public class ClinicalFilters
 
 			if (filter.equals("PASS"))
 			{
-				Variant variant = new Variant(record.getString(VcfRepository.CHROM), record.getString(VcfRepository.POS),
-						record.getString(VcfRepository.REF), record.getString(VcfRepository.ALT).split(",", -1));
+				Variant variant = new Variant(record.getString(VcfRepository.CHROM),
+						record.getString(VcfRepository.POS), record.getString(VcfRepository.REF), record.getString(
+								VcfRepository.ALT).split(",", -1));
 				analyzeVariant(record, variant);
 			}
 		}
 	}
 
+	/**
+	 * Analyzes a variant and prints it if it meets the specific conditions.
+	 * 
+	 * @param record
+	 *            {@link Entity} containing one line of the VCF file
+	 * @param variant
+	 *            {@link Variant} the variant we are currently looking at
+	 */
 	private void analyzeVariant(Entity record, Variant variant)
 	{
 		String[] exacAlleleFrequencies = record.get("EXAC_AF") == null ? null : record.getString("EXAC_AF").split(",",
@@ -132,23 +158,27 @@ public class ClinicalFilters
 		for (int i = 0; i < variant.getAlternateAlleles().length; i++)
 		{
 			String alternateAllele = variant.getAlternateAlleles()[i];
+
+			// if ExAC allele frequencies are known
 			if (exacAlleleFrequencies != null && !exacAlleleFrequencies[i].equals("."))
 			{
+				// if ExAC allele frequencies are below 0.05
 				Double exacAlleleFrequency = Double.parseDouble(exacAlleleFrequencies[i]);
 				if (exacAlleleFrequency <= 0.05)
 				{
+					// if impact is HIGH or MODERATE
 					Impact impact = variant.getImpact(i);
 					if (!(impact.equals(MODIFIER) || impact.equals(LOW)))
 					{
 						String gene = variant.getGene(i);
 
-						// check if we're looking at a gene that is part of one of the candidate lists, if not, skip it
+						// check if we're looking at a gene that is part of one of the candidate lists, if not -> skip
 						if (avmGenes.contains(gene))
 						{
 							int[] patient_GTC = countGenotypes(record, i, CANDIDATE_GENE_GROUP);
 							if (!(patient_GTC == null))
 							{
-								// if not actually seen in patients, skip it...
+								// if not actually seen in patients -> skip
 								if (!(patient_GTC[1] == 0 && patient_GTC[2] == 0))
 								{
 									int exacHomozygousAlleleCount = exacHomozygousAlleleCounts[i] == null ? 0 : Integer
@@ -157,13 +187,7 @@ public class ClinicalFilters
 									int exacHeterozygousAlleleCount = exacHeterozygousAlleleCounts[i] == null ? 0 : Integer
 											.parseInt(exacHeterozygousAlleleCounts[i]);
 
-									// if the number of people in exac with het or homalt exceed our patients with this
-									// variant it's hard to believe it :-\ exac has late-onset, common diseases, see:
-									// http://exac.broadinstitute.org/about
-
-									// if (ExAC_AC_HET > patient_GTC[1] || ExAC_AC_HOM > patient_GTC[2])
-
-									// changed from 10 to 100
+									// if number of times variant is seen in ExAC is below 100
 									if (!(exacHeterozygousAlleleCount > 100 || exacHomozygousAlleleCount > 100))
 									{
 										System.out.println("Location: " + variant.getChromosome() + ":"
@@ -188,18 +212,24 @@ public class ClinicalFilters
 		}
 	}
 
+	/**
+	 * Counts the number of times a particular genotype is found in the patients and control groups.
+	 * 
+	 * @param record
+	 *            {@link Entity} containing one line of the VCF file
+	 * @param altIndex
+	 *            the alternate allele we are currently looking at
+	 * @param candidateGeneGroup
+	 *            the group we are currently looking at
+	 * @return genotypeCounts genotype counts for patients + control group
+	 */
 	public int[] countGenotypes(Entity record, int altIndex, String candidateGeneGroup)
 	{
 		this.gtcMessage = "";
 
-		// because alt index = 0 for the first alt, we add 1
+		// because alt index = 0, add 1 (alternate allele)
 		altIndex = altIndex + 1;
 
-		// for a particular ref-alt combination:
-		// [homref, het, homalt]
-		// can only do for ref/alt-index combinations, so e.g. 0/0, 0|2 or 2/2. print warning on 1/2, 3|2, etc.
-		// warn if this happens
-		// also count for "other people" in [3][4] and [5] as control reference
 		int[] genotypeCounts = new int[]
 		{ 0, 0, 0, 0, 0, 0 };
 
@@ -207,27 +237,28 @@ public class ClinicalFilters
 		{
 			String sampleName = sample.getString("ORIGINAL_NAME");
 
-			// GTC count applies to the 'disease gene panel' of the patient disease group
 			boolean controls = true;
+
+			// if patient, control is false
 			if (candidateGeneGroup.equals(samplePatientGroupMap.get(sampleName)))
 			{
 				controls = false;
 			}
 
-			// System.out.println("patientGroup="+candidateGeneGroup+"sampleToGroup.get(sample.get(\"ORIGINAL_NAME\").toString())="+sampleToGroup.get(sample.get("ORIGINAL_NAME").toString()));
-
 			String genotype = sample.get("GT").toString();
 
+			// skip missing genotypes
 			if (genotype.equals("./."))
 			{
 				continue;
 			}
 
-			// quality filter: we want depth X or more
 			int depthOfCoverage = Integer.parseInt(sample.get("DP").toString());
+
+			// if depth above 10
 			if (depthOfCoverage >= 10)
 			{
-
+				// if genotype equals reference
 				if (genotype.equals("0/0") || genotype.equals("0|0"))
 				{
 					if (controls)
@@ -239,6 +270,8 @@ public class ClinicalFilters
 						genotypeCounts[0]++;
 					}
 				}
+
+				// if genotype equals heterozygous
 				else if (genotype.equals("0/" + altIndex) || genotype.equals(altIndex + "/0")
 						|| genotype.equals("0|" + altIndex) || genotype.equals(altIndex + "|0"))
 				{
@@ -254,6 +287,8 @@ public class ClinicalFilters
 					}
 
 				}
+
+				// if genotype equals homozygous
 				else if (genotype.equals(altIndex + "/" + altIndex) || genotype.equals(altIndex + "|" + altIndex))
 				{
 					if (controls)
@@ -268,6 +303,8 @@ public class ClinicalFilters
 					}
 
 				}
+
+				// Peforms only ref-alt ombinations (e.g. 0/0, 0|2 or 2/2), warning on 1/2, 3|2, etc.
 				else if (genotype.contains(altIndex + ""))
 				{
 					System.out.println("WARNING: genotype " + genotype + " not counted for altindex " + altIndex
@@ -280,6 +317,14 @@ public class ClinicalFilters
 		return genotypeCounts;
 	}
 
+	/**
+	 * The main method, invokes parseCommandLineArgs(), readPatientGroups(), and readVcf().
+	 * 
+	 * @param args
+	 *            the command line args
+	 * @throws Exception
+	 *             when bean cannot be created or if one of the files is incorrect or does not exist
+	 */
 	public static void main(String[] args) throws Exception
 	{
 		AnnotationConfigApplicationContext context = registerCommandLineAnnotator();
@@ -292,6 +337,14 @@ public class ClinicalFilters
 		context.close();
 	}
 
+	/**
+	 * Parses the command line arguments.
+	 * 
+	 * @param args
+	 *            the command line args
+	 * @throws Exception
+	 *             when length of arguments is not 2, or if one of the files is incorrect or does not exist
+	 */
 	public void parseCommandLineArgs(String[] args) throws Exception
 	{
 		if (!(args.length == 2))

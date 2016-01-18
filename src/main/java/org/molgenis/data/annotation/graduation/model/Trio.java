@@ -7,6 +7,12 @@ import org.elasticsearch.common.collect.Lists;
 import org.elasticsearch.common.collect.Maps;
 import org.molgenis.data.Entity;
 
+/**
+ * This class stores information used to create a Trio Object.
+ * 
+ * @author mbijlsma
+ *
+ */
 public class Trio
 {
 	private String family_id;
@@ -21,6 +27,18 @@ public class Trio
 
 	private Map<String, List<Candidate>> candidatesForChildperGene = Maps.newHashMap();
 
+	/**
+	 * This is the constructor and is invoked to create a Trio Object.
+	 * 
+	 * @param family_id
+	 *            the family ID
+	 * @param child_id
+	 *            the child ID
+	 * @param father_id
+	 *            the father ID
+	 * @param mother_id
+	 *            the mother ID
+	 */
 	public Trio(String family_id, String child_id, String father_id, String mother_id)
 	{
 		this.family_id = family_id;
@@ -99,6 +117,14 @@ public class Trio
 		this.candidatesForChildperGene = candidatesForChildperGene;
 	}
 
+	/**
+	 * A helper method used to add genes and variants to a map.
+	 * 
+	 * @param gene
+	 *            the gene we are currently looking at
+	 * @param variant
+	 *            the variant we are currently looking at
+	 */
 	public void addInfoToVariantMap(String gene, Entity variant)
 	{
 		if (!(variants.containsKey(gene)))
@@ -111,9 +137,16 @@ public class Trio
 		{
 			variants.get(gene).add(variant);
 		}
-
 	}
 
+	/**
+	 * A helper method to add a list of samples for one gene for one child ID to a map.
+	 * 
+	 * @param gene
+	 *            the gene we are currently looking at
+	 * @param sample
+	 *            {@link Entity} containing one sample
+	 */
 	public void addSampleToChildMap(String gene, Entity sample)
 	{
 		if (!(samplesChild.containsKey(gene)))
@@ -126,9 +159,16 @@ public class Trio
 		{
 			samplesChild.get(gene).add(sample);
 		}
-
 	}
 
+	/**
+	 * A helper method to add a list of samples for one gene for one father ID to a map.
+	 * 
+	 * @param gene
+	 *            the gene we are currently looking at
+	 * @param sample
+	 *            {@link Entity} containing one sample
+	 */
 	public void addSampleToFatherMap(String gene, Entity sample)
 	{
 		if (!(samplesFather.containsKey(gene)))
@@ -141,9 +181,16 @@ public class Trio
 		{
 			samplesFather.get(gene).add(sample);
 		}
-
 	}
 
+	/**
+	 * A helper method to add a list of samples for one gene for one mother ID to a map.
+	 * 
+	 * @param gene
+	 *            the gene we are currently looking at
+	 * @param sample
+	 *            {@link Entity} containing one sample
+	 */
 	public void addSampleToMotherMap(String gene, Entity sample)
 	{
 		if (!(samplesMother.containsKey(gene)))
@@ -156,9 +203,16 @@ public class Trio
 		{
 			samplesMother.get(gene).add(sample);
 		}
-
 	}
 
+	/**
+	 * A helper method that adds a list of {@link Candidate}s for one gene for one child to a map.
+	 * 
+	 * @param gene
+	 *            the gene we are currently looking at
+	 * @param candidate
+	 *            the {@link Candidate} we are currently looking at
+	 */
 	public void addCandidate(String gene, Candidate candidate)
 	{
 		if (!(candidatesForChildperGene.containsKey(gene)))
@@ -172,5 +226,4 @@ public class Trio
 			candidatesForChildperGene.get(gene).add(candidate);
 		}
 	}
-
 }
