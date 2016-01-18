@@ -21,11 +21,11 @@ public class GetChildSampleIds
 	private File pbtFile;
 
 	/**
-	 * Reads the PED file and adds the family ID and child ID to a new map.
+	 * Reads and parses the PED file and adds the family ID and child ID to a new map.
 	 * 
 	 * @return pedFamilyAndChildIds a HashMap containing the family IDs and associated child IDs
 	 * @throws IOException
-	 *             when the pedFile is incorrect
+	 *             when the pedFile is incorrect or cannot be parsed
 	 */
 	public Map<String, String> readPed() throws IOException
 	{
@@ -39,11 +39,11 @@ public class GetChildSampleIds
 	}
 
 	/**
-	 * Reads the PBT file and adds the family ID to a new list.
+	 * Reads and parses the PBT file and adds the family ID to a new list.
 	 * 
 	 * @return pbtFamilyIds a list containing the family IDs
 	 * @throws IOException
-	 *             when pbtFile is incorrect
+	 *             when pbtFile is incorrect or cannot be parsed
 	 */
 	public List<String> getFamilyIdentifiersFromPbtFile() throws IOException
 	{

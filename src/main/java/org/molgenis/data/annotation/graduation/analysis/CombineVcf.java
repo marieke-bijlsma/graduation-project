@@ -32,7 +32,7 @@ public class CombineVcf
 	 * Reads a VCF file and the associated datasets, parses it, and writes it to a new file.
 	 *
 	 * @throws Exception
-	 *             when output or VCF file is incorrect
+	 *             when output or vcfFile is incorrect or cannot be parsed
 	 */
 	public void annotateVcfFile() throws Exception
 	{
@@ -73,7 +73,7 @@ public class CombineVcf
 	 * @param args
 	 *            the command line arguments
 	 * @throws Exception
-	 *             when bean cannot be created or file is incorrect
+	 *             when bean cannot be created or file is incorrect or does not exist
 	 */
 	public static void main(String[] args) throws Exception
 	{
@@ -90,7 +90,7 @@ public class CombineVcf
 	 * Parses the command line arguments.
 	 * 
 	 * @param args
-	 *            the command line arguments
+	 *            the command line args
 	 * @throws Exception
 	 *             when the length of the arguments is not 2, or if one of the files is incorrect or does not exist
 	 */

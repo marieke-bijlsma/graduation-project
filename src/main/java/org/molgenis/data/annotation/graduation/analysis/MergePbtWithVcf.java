@@ -57,7 +57,7 @@ public class MergePbtWithVcf
 	 *
 	 * @return pbtEntries a map containing chromosome-position combination and associated PBT information
 	 * @throws IOException
-	 *             when pbtFile is incorrect
+	 *             when pbtFile is incorrect or cannot be parsed
 	 */
 	public HashMap<String, List<String[]>> readPBT() throws IOException
 	{
@@ -93,7 +93,7 @@ public class MergePbtWithVcf
 	 * Reads and parses the VCF file (annotated with ExAC).
 	 * 
 	 * @throws Exception
-	 *             when pbtFile or vcfFile is incorrect or does not exist
+	 *             when pbtFile or vcfFile is incorrect or cannot be parsed
 	 */
 	public void annotateVcfWithExac() throws Exception
 	{
@@ -129,7 +129,7 @@ public class MergePbtWithVcf
 	 * @param entries
 	 *            list containing chromosome-position combination and the associated info from PBT file
 	 * @throws Exception
-	 *             when vcfFile is incorrect or does not exist
+	 *             when vcfFile is incorrect or cannot be converted
 	 */
 	public void combineVCFwithPBT(Entity record, List<String[]> entries) throws Exception
 	{
@@ -308,7 +308,7 @@ public class MergePbtWithVcf
 	 * The main method, invokes parseCommandLineArgs() and annotateVcfWithExac().
 	 * 
 	 * @param args
-	 *            the command line arguments
+	 *            the command line args
 	 * @throws Exception
 	 *             when bean cannot be created or when VCF file does not exist or is incorrect
 	 */

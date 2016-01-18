@@ -33,7 +33,7 @@ public class TestRegularExpression
 	 * The main method.
 	 * 
 	 * @param args
-	 *            the command line arguments
+	 *            the command line args
 	 */
 	public static void main(String[] args)
 	{

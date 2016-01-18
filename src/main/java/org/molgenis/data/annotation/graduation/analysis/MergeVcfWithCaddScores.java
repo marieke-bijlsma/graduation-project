@@ -28,10 +28,10 @@ public class MergeVcfWithCaddScores
 	Map<String, String> mergedVcfAndCadd = newHashMap();
 
 	/**
-	 * Reads the file with CADD scores and adds them, together with the chromosome and position combination, to a map.
+	 * Reads and parses the file with CADD scores and adds them, together with the chromosome and position combination, to a map.
 	 * 
 	 * @throws IOException
-	 *             when input or output file is incorrect
+	 *             when input or output file is incorrect or cannot be parsed
 	 */
 	public void readAndProcessFile() throws IOException
 	{
@@ -60,10 +60,10 @@ public class MergeVcfWithCaddScores
 	}
 
 	/**
-	 * Reads VCF file and writes the lines with associated CADD scores to a new file.
+	 * Reads and parses the VCF file and writes the lines with associated CADD scores to a new file.
 	 * 
 	 * @throws IOException
-	 *             when output or VCF file is incorrect
+	 *             when output or vcfFile is incorrect or cannot be parsed
 	 */
 	private void printVcfFileWithCadd() throws IOException
 	{
@@ -91,7 +91,7 @@ public class MergeVcfWithCaddScores
 	 * @param args
 	 *            the command line args
 	 * @throws Exception
-	 *             when one of the files is incorrect
+	 *             when one of the files is incorrect or does not exist
 	 */
 	public static void main(String[] args) throws Exception
 	{

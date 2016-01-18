@@ -45,7 +45,7 @@ public class FileReadUtils
 	}
 
 	/**
-	 * Gets the annotation field from a file.
+	 * Parses the annotation field from a file.
 	 * 
 	 * @param record
 	 *            one line from a file

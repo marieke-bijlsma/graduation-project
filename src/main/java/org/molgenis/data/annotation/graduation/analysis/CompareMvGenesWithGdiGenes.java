@@ -23,7 +23,7 @@ public class CompareMvGenesWithGdiGenes
 			"/Users/molgenis/Documents/graduation_project/mendelianViolationFiles/mendelian_violation_Xadjusted_replicates.txt");
 
 	/**
-	 * Reads the Mendelian violation file and adds the gene column to a new list.
+	 * Reads and parses the Mendelian violation file and adds the gene column to a new list.
 	 * 
 	 * @return mendelianViolationGenes a list containing the gene column from this file
 	 * @throws FileNotFoundException
@@ -43,11 +43,11 @@ public class CompareMvGenesWithGdiGenes
 	}
 
 	/**
-	 * Reads the Gene Damage Index file and adds the gene column to a new list.
+	 * Reads and parses the Gene Damage Index file and adds the gene column to a new list.
 	 *
 	 * @return gdiGenes a list containing the gene column from this file
 	 * @throws IOException
-	 *             when gdiFile is incorrect
+	 *             when gdiFile is incorrect or cannot be parsed
 	 */
 	public List<String> readGDIfile() throws IOException
 	{

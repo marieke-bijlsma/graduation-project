@@ -55,7 +55,7 @@ public class InheritanceAnalysis
 	 * 
 	 * @return trioList a list of {@link Trio}s
 	 * @throws IOException
-	 *             when familyAndChildSamplesFile is incorrect
+	 *             when familyAndChildSamplesFile is incorrect or cannot be parsed
 	 */
 	public List<Trio> readPedFile() throws IOException
 	{
@@ -91,7 +91,7 @@ public class InheritanceAnalysis
 	 * Reads and parses a VCF file.
 	 * 
 	 * @throws Exception
-	 *             when VCF file is incorrect or does not exists
+	 *             when VCF file is incorrect or cannot be parsed
 	 */
 	public void readAndProcessVcfFile() throws Exception
 	{
@@ -136,7 +136,7 @@ public class InheritanceAnalysis
 	}
 
 	/**
-	 * Gets genes from annotation field of VCF and adds them to a list.
+	 * Parses genes from annotation field of VCF and adds them to a list.
 	 * 
 	 * @param multiAnn
 	 *            multi-annotation field
@@ -230,7 +230,7 @@ public class InheritanceAnalysis
 	 * @param gene
 	 *            the gene we are currently looking at
 	 * @throws Exception
-	 *             when pedFile or vcfFile is incorrect or does not exist
+	 *             when candidateOutputFile or matrixOutputFile is incorrect
 	 */
 	public void analyzeGene(List<Trio> trioList, String gene) throws Exception
 	{
@@ -465,7 +465,7 @@ public class InheritanceAnalysis
 	 * @param gene
 	 *            the gene we are currently looking at
 	 * @throws IOException
-	 *             when candidateOutputFile is incorrect
+	 *             when candidateOutputFile is incorrect or cannot be written to
 	 */
 	private void printCandidates(List<Candidate> candidates, Trio trio, String gene) throws IOException
 	{
@@ -489,7 +489,7 @@ public class InheritanceAnalysis
 	 * @param geneFamilyCandidateCounts
 	 *            list containing the number of variant candidates per gene
 	 * @throws IOException
-	 *             when matrixOutputFile is incorrect
+	 *             when matrixOutputFile is incorrect or cannot be written to
 	 */
 	private void printMatrix(Map<String, List<String>> geneFamilyCandidateCounts) throws IOException
 	{

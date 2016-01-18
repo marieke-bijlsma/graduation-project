@@ -56,7 +56,7 @@ public class CreateNewMendelianViolationsForX
 	 * 
 	 * @return Xchromosomes a list containing the X chromosome lines from the Mendelian violation file
 	 * @throws IOException
-	 *             when one of the files is incorrect or does not exist
+	 *             when one of the files is incorrect or cannot be parsed
 	 */
 	private List<String> parseXchromosomesFromMendelianViolationFile() throws IOException
 	{
@@ -84,7 +84,7 @@ public class CreateNewMendelianViolationsForX
 	 * @param record
 	 *            the line of the Mendelian violation file we are currently looking at
 	 * @throws IOException
-	 *             when mvFile or outputFile is incorrect
+	 *             when mvFile or outputFile is incorrect or cannot be parsed
 	 */
 	private void writeAutosomalChromosomesToFile(BufferedWriter bufferedWriter, List<String> Xchromosomes, String record)
 			throws IOException
@@ -108,13 +108,13 @@ public class CreateNewMendelianViolationsForX
 	}
 
 	/**
-	 * Gets male patients and filters the variants that do not meet the specific conditions, otherwise they are written
+	 * Parses male patients and filters the variants that do not meet the specific conditions, otherwise they are written
 	 * to a new file.
 	 * 
 	 * @param Xchromosomes
 	 *            a list containing the X chromosome lines from the Mendelian violation file
 	 * @throws IOException
-	 *             when pedFile or outputFile is incorrect
+	 *             when pedFile or outputFile is incorrect or cannot be parsed
 	 */
 	public void getSexOfPatient(List<String> Xchromosomes) throws IOException
 	{

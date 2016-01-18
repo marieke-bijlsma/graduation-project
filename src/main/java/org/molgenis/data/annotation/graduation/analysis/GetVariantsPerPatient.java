@@ -30,7 +30,7 @@ public class GetVariantsPerPatient
 	 * Reads and parses a VCF file and adds the variant count per patient and the impact count per patient to a map.
 	 * 
 	 * @throws Exception
-	 *             when vcfFile is incorrect or does not exist
+	 *             when vcfFile is incorrect or cannot be parsed
 	 */
 	public void readVcf() throws Exception
 	{
@@ -179,7 +179,7 @@ public class GetVariantsPerPatient
 	 * @param args
 	 *            the command line args
 	 * @throws Exception
-	 *             when VCF file is not correct or does not exist
+	 *             when VCF file is incorrect or does not exist
 	 */
 	public static void main(String[] args) throws Exception
 	{

@@ -28,7 +28,7 @@ public class FilterVcf
 	 * Reads and filters the VCF file according to some specific thresholds.
 	 * 
 	 * @throws Exception
-	 *             when outputFile or vcfFile is incorrect or does not exist
+	 *             when outputFile or vcfFile is incorrect or cannot be parsed
 	 */
 	public void readAndFilterVcf() throws Exception
 	{

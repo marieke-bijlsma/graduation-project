@@ -24,7 +24,7 @@ public class GetOverviewPerPatient
 	 * 
 	 * @return samplesWithSex a map containing the sample ID and the sex of the patient
 	 * @throws Exception
-	 *             when samplesFile is incorrect or does not exist
+	 *             when samplesFile is incorrect or cannot be parsed
 	 */
 	private Map<String, String> readSamplesFile() throws Exception
 	{
@@ -41,7 +41,7 @@ public class GetOverviewPerPatient
 	 * Reads and parses the Mendelian violation file and prints an overview of candidate variants per patient.
 	 * 
 	 * @throws Exception
-	 *             when mvFile is incorrect or does not exist
+	 *             when mvFile is incorrect or cannot be parsed
 	 */
 	private void readMvFile() throws Exception
 	{

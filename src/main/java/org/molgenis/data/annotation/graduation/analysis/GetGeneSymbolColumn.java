@@ -36,10 +36,8 @@ public class GetGeneSymbolColumn
 	 * 
 	 * @param record
 	 *            a list containing all lines of the file
-	 * @throws IOException
-	 *             when input list is incorrect
 	 */
-	public void getGeneColumn(List<String> records) throws IOException
+	public void getGeneColumn(List<String> records)
 	{
 		// Variant can have multiple gene symbols with different impacts
 		// Variant then contains multiple times the impact, followed by different gene symbols
@@ -66,7 +64,7 @@ public class GetGeneSymbolColumn
 	 * @param args
 	 *            the command line args
 	 * @throws IOException
-	 *             when input file is incorrect
+	 *             when vcfFile is incorrect or does not exist
 	 */
 	public static void main(String[] args) throws IOException
 	{

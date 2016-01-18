@@ -21,11 +21,11 @@ public class CompareFhdGenesWithCandidateGenes
 	private File candidatesFile;
 
 	/**
-	 * Reads the convertedIDsFile and adds both Ensembl IDs and gene symbols to a map.
+	 * Reads and parses the convertedIDsFile and adds both Ensembl IDs and gene symbols to a map.
 	 * 
 	 * @return ensemblIdsAndGeneSymbols a map containing Ensembl IDs and gene symbols
 	 * @throws IOException
-	 *             when convertedIDsFile is incorrect
+	 *             when convertedIDsFile is incorrect or cannot be parsed
 	 */
 	public HashMap<String, String> readConvertedFile() throws IOException
 	{
@@ -40,13 +40,13 @@ public class CompareFhdGenesWithCandidateGenes
 	}
 
 	/**
-	 * Reads the fhdFile and adds gene symbol with associated expression to a map.
+	 * Reads and parses the fhdFile and adds gene symbol with associated expression to a map.
 	 * 
 	 * @param geneIdsAndSymbols
 	 *            a map containing Ensembl IDs and gene symbols
 	 * @return geneSymbolsAndExpression a map containing gene symbols and associated expression
 	 * @throws IOException
-	 *             when fhdFile is incorrect
+	 *             when fhdFile is incorrect or cannot be parsed
 	 */
 	public HashMap<String, String> readFhd(HashMap<String, String> geneIdsAndSymbols) throws IOException
 	{
@@ -70,12 +70,12 @@ public class CompareFhdGenesWithCandidateGenes
 	}
 
 	/**
-	 * Reads the candidatesFile and compares the gene symbols with the gene symbols from FHD and prints result.
+	 * Reads and parses the candidatesFile and compares the gene symbols with the gene symbols from FHD and prints result.
 	 * 
 	 * @param geneSymbolsAndExpression
 	 *            a map containing gene symbols and expression
 	 * @throws IOException
-	 *             when candidatesFile is incorrect
+	 *             when candidatesFile is incorrect or cannot be parsed
 	 */
 	public void compareFhdAndCandidates(HashMap<String, String> geneSymbolsAndExpression) throws IOException
 	{

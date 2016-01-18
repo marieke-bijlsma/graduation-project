@@ -111,7 +111,7 @@ public class ClinicalFilters
 	 * Reads and parses a VCF file.
 	 * 
 	 * @throws Exception
-	 *             when VCF file is incorrect or does not exist
+	 *             when VCF file is incorrect or cannot be parsed
 	 */
 	private void readVcf() throws Exception
 	{

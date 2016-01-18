@@ -19,7 +19,7 @@ public class ReadVcfLines
 	 * Reads the given file per line and prints the requested information, in this case the sample IDs.
 	 * 
 	 * @throws IOException
-	 *             when input file is incorrect
+	 *             when vcfFile is incorrect or cannot be parsed
 	 */
 	private static void readFile() throws IOException
 	{
@@ -49,7 +49,7 @@ public class ReadVcfLines
 	 * @param args
 	 *            the command line args
 	 * @throws IOException
-	 *             when input file is incorrect
+	 *             when vcfFile is incorrect
 	 */
 	public static void main(String[] args) throws IOException
 	{
